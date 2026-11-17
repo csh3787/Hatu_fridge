@@ -791,24 +791,58 @@ function seedShopping(){ return []; }
 let _uidSeq = 0;
 function uid(){ return 'i' + Date.now().toString(36) + (_uidSeq++).toString(36) + Math.random().toString(36).slice(2,6); }
 
-/* ---------- StorageAdapter (localStorage ↔ 실시간 DB 교체 지점) ---------- */
+/* ---------- StorageAdapter (localStorage + 원격 data/fridge.json) ----------
+   삐클이가 GitHub(csh3787/Hatu_fridge)의 data/fridge.json 을 새로 올리면
+   앱을 열 때(그리고 화면으로 돌아올 때) 원격 파일을 먼저 확인해서
+   최신 재고·식단·장보기를 로컬에 합쳐 보여줍니다.
+   원격 확인이 실패하거나 오프라인이면 조용히 localStorage 만 사용합니다.
+   ---------------------------------------------------------------- */
 const StorageAdapter = (() => {
   const KEY = 'hatwoo-fridge-v2';
+  const REMOTE_URL = './data/fridge.json';
+  const CHECK_GAP = 20000;     // 원격 확인 최소 간격(ms)
+  const TOMB_MAX = 300;        // 기억해 둘 '지운 항목' id 최대 개수
   let memory = null;           // 로컬스토리지 차단 환경 폴백
   let listeners = [];
+  let lastCheck = 0;
+  let syncing = null;
+
+  const nowIso = () => new Date().toISOString();
+  function ts(v){ const t = Date.parse(v || ''); return isNaN(t) ? 0 : t; }
+
+  function blank(){
+    return {
+      inventory: seedInventory(), shopping: seedShopping(), meals: [],
+      updatedAt: nowIso(), lastSyncedAt: null,
+      deletedIds: { inventory: [], shopping: [] },
+      touched: {}
+    };
+  }
+  // 예전 버전에서 저장된 상태도 그대로 쓸 수 있게 형태를 맞춰줍니다.
+  function shape(s){
+    if(!s || typeof s !== 'object') return blank();
+    if(!Array.isArray(s.inventory)) s.inventory = [];
+    if(!Array.isArray(s.shopping)) s.shopping = [];
+    if(!Array.isArray(s.meals)) s.meals = [];
+    if(!s.deletedIds || typeof s.deletedIds !== 'object') s.deletedIds = {};
+    if(!Array.isArray(s.deletedIds.inventory)) s.deletedIds.inventory = [];
+    if(!Array.isArray(s.deletedIds.shopping)) s.deletedIds.shopping = [];
+    if(!s.touched || typeof s.touched !== 'object') s.touched = {};
+    return s;
+  }
 
   function read(){
     try{
       const raw = localStorage.getItem(KEY);
-      if(raw) return JSON.parse(raw);
+      if(raw) return shape(JSON.parse(raw));
     }catch(e){ /* 사파리 프라이빗 모드 등 */ }
-    if(memory) return memory;
-    const init = { inventory: seedInventory(), shopping: seedShopping(), updatedAt: new Date().toISOString() };
+    if(memory) return shape(memory);
+    const init = blank();
     write(init);
     return init;
   }
   function write(state){
-    state.updatedAt = new Date().toISOString();
+    state.updatedAt = nowIso();
     memory = state;
     try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
   }
@@ -821,33 +855,175 @@ const StorageAdapter = (() => {
     emit('remote');
   });
 
+  /* ---- 원격 데이터 병합 ---- */
+  function markTouch(s, id){ if(!s.touched) s.touched = {}; s.touched[id] = Date.now(); }
+
+  // id 가 없는 원격 항목도 매번 같은 id 를 갖도록 이름·날짜로 만들어 줍니다.
+  function remoteId(item, prefix){
+    if(item && item.id) return String(item.id);
+    const seed = String((item && item.name) || '') + '|' + String((item && (item.expiresAt || item.from || item.addedAt)) || '');
+    let h = 0;
+    for(let i = 0; i < seed.length; i++){ h = (h * 31 + seed.charCodeAt(i)) | 0; }
+    return prefix + Math.abs(h).toString(36);
+  }
+
+  function normInv(r, id){
+    return {
+      id,
+      name: String(r.name || '').trim(),
+      amount: r.amount == null ? '' : String(r.amount),
+      qty: Math.max(1, Number(r.qty) || 1),
+      location: ['냉장','냉동','실온'].includes(r.location) ? r.location : '냉장',
+      expiresAt: r.expiresAt ? String(r.expiresAt).slice(0, 10) : '',
+      addedAt: r.addedAt || nowIso()
+    };
+  }
+  function normShop(r, id){
+    return {
+      id,
+      name: String(r.name || '').trim(),
+      from: r.from ? String(r.from) : '삐클이',
+      done: !!r.done,
+      addedAt: r.addedAt || nowIso()
+    };
+  }
+
+  /**
+   * 원격 JSON 을 로컬에 합칩니다. (원격이 더 최신일 때만)
+   * - 같은 id: 세화가 마지막 동기화 이후 직접 고친 항목은 그대로 두고, 아니면 원격 값으로 갱신
+   * - 원격에만 있는 id: 새로 추가
+   * - 로컬에만 있는 id: 세화가 직접 넣은 항목이므로 유지
+   * - 세화가 지운 id(deletedIds): 원격에 다시 나타나도 되살리지 않음
+   */
+  function mergeRemote(remote){
+    if(!remote || typeof remote !== 'object') return false;
+    const incoming = ts(remote.updatedAt);
+    if(!incoming) return false;
+    const s = read();
+    if(ts(s.lastSyncedAt) >= incoming) return false;   // 이미 반영한 버전
+
+    const seenAt = incoming;
+    // 사용자의 로컬 수정이 원격 스냅샷보다 나중이면 그 항목은 그대로 둡니다.
+    const deletedInv = new Set(s.deletedIds.inventory);
+    const deletedShop = new Set(s.deletedIds.shopping);
+
+    // 재고
+    const inv = new Map(s.inventory.map(it => [it.id, it]));
+    (Array.isArray(remote.inventory) ? remote.inventory : []).forEach(r => {
+      if(!r || !r.name) return;
+      const id = remoteId(r, 'ri');
+      if(deletedInv.has(id)) return;
+      const local = inv.get(id);
+      if(local && (s.touched[id] || 0) > seenAt) return;   // 직접 고친 항목은 유지
+      inv.set(id, normInv(r, id));
+    });
+    s.inventory = Array.from(inv.values());
+
+    // 장보기
+    const shop = new Map(s.shopping.map(it => [it.id, it]));
+    (Array.isArray(remote.shopping) ? remote.shopping : []).forEach(r => {
+      if(!r || !r.name) return;
+      const id = remoteId(r, 'rs');
+      if(deletedShop.has(id)) return;
+      const local = shop.get(id);
+      if(local && (s.touched[id] || 0) > seenAt) return;
+      shop.set(id, normShop(r, id));
+    });
+    s.shopping = Array.from(shop.values());
+
+    // 식단 (원격이 보내준 경우 그대로 사용)
+    if(Array.isArray(remote.meals)) s.meals = remote.meals;
+
+    s.lastSyncedAt = new Date(incoming).toISOString();
+    write(s);
+    return true;
+  }
+
+  async function fetchRemote(){
+    try{
+      if(typeof fetch !== 'function') return null;
+      const res = await fetch(REMOTE_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if(!res || !res.ok) return null;
+      return await res.json();
+    }catch(e){ return null; }
+  }
+
+  /** 원격 파일을 확인해 새 내용이 있으면 병합하고 화면 갱신 신호를 보냅니다. */
+  async function syncRemote(){
+    if(syncing) return syncing;
+    const t = Date.now();
+    if(t - lastCheck < CHECK_GAP) return false;
+    lastCheck = t;
+    syncing = (async () => {
+      const remote = await fetchRemote();
+      if(!remote) return false;
+      const changed = mergeRemote(remote);
+      if(changed) emit('remote');
+      return changed;
+    })();
+    try{ return await syncing; } finally { syncing = null; }
+  }
+
+  // 저장 전후를 비교해 '지운 항목'과 '직접 고친 항목'을 기억해 둡니다.
+  const invSig = x => [x.name, x.amount, x.qty, x.location, x.expiresAt].join('|');
+  const shopSig = x => [x.name, x.from, !!x.done].join('|');
+  function trackDiff(s, prevInv, prevShop, nextInv, nextShop){
+    const del = s.deletedIds;
+    const nextInvIds = new Set(nextInv.map(x => x.id));
+    const nextShopIds = new Set(nextShop.map(x => x.id));
+    const prevInvMap = new Map(prevInv.map(x => [x.id, invSig(x)]));
+    const prevShopMap = new Map(prevShop.map(x => [x.id, shopSig(x)]));
+    prevInv.forEach(x => { if(!nextInvIds.has(x.id)) del.inventory.push(x.id); });
+    prevShop.forEach(x => { if(!nextShopIds.has(x.id)) del.shopping.push(x.id); });
+    nextInv.forEach(x => {
+      if(!prevInvMap.has(x.id) || prevInvMap.get(x.id) !== invSig(x)) markTouch(s, x.id);
+    });
+    nextShop.forEach(x => {
+      if(!prevShopMap.has(x.id) || prevShopMap.get(x.id) !== shopSig(x)) markTouch(s, x.id);
+    });
+    del.inventory = Array.from(new Set(del.inventory)).slice(-TOMB_MAX);
+    del.shopping  = Array.from(new Set(del.shopping)).slice(-TOMB_MAX);
+  }
+
   return {
-    /** @returns {{inventory:Array, shopping:Array, updatedAt:string}} */
-    async load(){ return read(); },
+    /** @returns {{inventory:Array, shopping:Array, meals:Array, updatedAt:string, lastSyncedAt:string}} */
+    async load(){
+      try{ await syncRemote(); }catch(e){ /* 오프라인 등 — 로컬만 사용 */ }
+      return read();
+    },
     async saveInventory(list){
-      const s = read(); s.inventory = list; write(s); emit();
+      const s = read();
+      trackDiff(s, s.inventory, s.shopping, list, s.shopping);
+      s.inventory = list; write(s); emit();
     },
     async saveShopping(list){
-      const s = read(); s.shopping = list; write(s); emit();
+      const s = read();
+      trackDiff(s, s.inventory, s.shopping, s.inventory, list);
+      s.shopping = list; write(s); emit();
     },
     /** 재고·장보기를 한 번에 저장 (중간 상태가 다른 기기로 새지 않도록) */
     async saveAll(inventory, shopping){
-      const s = read(); s.inventory = inventory; s.shopping = shopping; write(s); emit();
+      const s = read();
+      trackDiff(s, s.inventory, s.shopping, inventory, shopping);
+      s.inventory = inventory; s.shopping = shopping; write(s); emit();
     },
     async setQty(id, qty){
       const s = read();
       const it = s.inventory.find(x => x.id === id);
       if(!it) return;
       it.qty = qty;
+      markTouch(s, id);
       write(s); emit();
     },
     async removeItem(id){
       const s = read();
       s.inventory = s.inventory.filter(x => x.id !== id);
+      s.deletedIds.inventory = Array.from(new Set(s.deletedIds.inventory.concat(id))).slice(-TOMB_MAX);
       write(s); emit();
     },
     subscribe(fn){ listeners.push(fn); return () => { listeners = listeners.filter(f => f !== fn); }; },
-    /** 실시간 DB 연동 시 이 메서드가 서버 구독으로 바뀝니다. */
+    /** 원격 data/fridge.json 확인 (앱 열 때·화면 복귀 시·주기적으로 호출) */
+    syncFromRemote: () => { lastCheck = 0; return syncRemote(); },
     refresh: () => emit('local')
   };
 })();
@@ -898,8 +1074,8 @@ const EMPTY_ICON = {
   search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.6"/><path d="M16 16l4.2 4.2"/></svg>`
 };
 
-/* ---------- 식단 데이터 ---------- */
-const MEALS = [];
+/* ---------- 식단 데이터 (원격 data/fridge.json 의 meals 로 채워집니다) ---------- */
+let MEALS = [];
 
 /* ---------- 앱 상태 ---------- */
 const state = {
@@ -925,20 +1101,46 @@ function toast(html){
 }
 
 /* ---------- 데이터 로드 & 구독 ---------- */
+function normalizeMeals(list){
+  if(!Array.isArray(list)) return [];
+  return list
+    .filter(m => m && Array.isArray(m.ing) && m.ing.length)
+    .map(m => ({
+      emo: m.emo || '🍽️',
+      day: m.day || '',
+      kids: String(m.kids || m.adult || '오늘의 메뉴'),
+      adult: String(m.adult || m.kids || ''),
+      ing: m.ing.filter(g => g && g.name).map(g => ({ key: g.key || g.name, name: String(g.name) })),
+      time: m.time ? String(m.time) : '',
+      steps: Array.isArray(m.steps) ? m.steps.map(String) : [],
+      tip: m.tip ? String(m.tip) : ''
+    }))
+    .filter(m => m.ing.length);
+}
+function applyState(s){
+  state.inventory = Array.isArray(s.inventory) ? s.inventory : [];
+  state.shopping = Array.isArray(s.shopping) ? s.shopping : [];
+  MEALS = normalizeMeals(s.meals);
+  const a = Date.parse(s.lastSyncedAt || '') || 0;
+  const b = Date.parse(s.updatedAt || '') || 0;
+  setSyncText(new Date(Math.max(a, b) || Date.now()).toISOString());
+}
+
 async function boot(){
   const s = await StorageAdapter.load();
-  state.inventory = s.inventory;
-  state.shopping = s.shopping;
-  setSyncText(s.updatedAt);
+  applyState(s);
   renderAll();
   StorageAdapter.subscribe(async (reason) => {
     const t = await StorageAdapter.load();
-    state.inventory = t.inventory;
-    state.shopping = t.shopping;
-    setSyncText(t.updatedAt);
+    applyState(t);
     renderAll();
-    if(reason === 'remote') toast('도현 님이 냉장고를 바꿨어요 · 실시간 공유 중');
+    if(reason === 'remote') toast('새로 올라온 냉장고 정보를 불러왔어요');
   });
+  // 화면으로 돌아오거나 앱을 다시 열 때 원격 데이터를 확인합니다.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') StorageAdapter.syncFromRemote();
+  });
+  window.addEventListener('focus', () => StorageAdapter.syncFromRemote());
 }
 function setSyncText(iso){
   const el = $('#syncText');
@@ -1288,7 +1490,7 @@ $('#mealList').addEventListener('click', async e => {
       const k = norm(g.name);
       if(existing.has(k)) return;
       existing.add(k);
-      state.shopping.push({ id: uid(), name: g.name, from: `${MEALS[idx].day}요일 식단`, done:false, addedAt: new Date().toISOString() });
+      state.shopping.push({ id: uid(), name: g.name, from: (MEALS[idx].day ? `${MEALS[idx].day}요일 식단` : '추천 식단'), done:false, addedAt: new Date().toISOString() });
       added.push(g.name);
     });
     if(added.length){
@@ -1452,7 +1654,9 @@ window.addEventListener('scroll', () => {
 // 30초마다 "동기화" 표기 갱신 + 날짜 넘어가면 D-day 재계산
 setInterval(async () => {
   const s = await StorageAdapter.load();
-  setSyncText(s.updatedAt);
+  const a = Date.parse(s.lastSyncedAt || '') || 0;
+  const b = Date.parse(s.updatedAt || '') || 0;
+  setSyncText(new Date(Math.max(a, b) || Date.now()).toISOString());
   renderFridge();
 }, 30000);
 </script>
