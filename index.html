@@ -131,7 +131,7 @@ input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inh
 .share-pill .heart{color:var(--ink-3);font-size:9px}
 
 /* ── 본문 ───────────────────────────── */
-.screen{flex:1;padding:16px var(--pad) calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));animation:fade .28s ease both}
+.screen{flex:1;display:flex;flex-direction:column;padding:16px var(--pad) calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));animation:fade .28s ease both}
 #screen-meal,#screen-shop{padding-top:4px}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -153,10 +153,11 @@ input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inh
 }
 .stat .ico{
   width:22px;height:22px;border-radius:8px;display:grid;place-items:center;
-  font-size:12px;flex:none;line-height:1;background:var(--cream-2);
-  filter:grayscale(1);
+  flex:none;line-height:1;background:var(--cream-2);color:var(--ink-2);
 }
+.stat .ico svg{width:13px;height:13px;display:block}
 .stat .ico.i-all,.stat .ico.i-soon,.stat .ico.i-exp{background:var(--cream-2)}
+.stat.is-on .ico{background:var(--ink);color:#FFF}
 .stat .v{
   font-size:21px;font-weight:800;letter-spacing:-0.05em;line-height:1;
   font-variant-numeric:tabular-nums;color:var(--ink);
@@ -210,6 +211,11 @@ input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inh
 .list-head span{font-size:11px;color:var(--ink-3)}
 
 .inv-list{display:flex;flex-direction:column;gap:8px}
+
+/* 빈 화면은 남는 공간 가운데에 */
+.inv-list:has(> .empty),#mealList:has(> .empty),#shopList:has(> .empty){
+  flex:1;display:flex;align-items:center;justify-content:center;padding-bottom:36px;
+}
 .item{
   background:var(--milk);border:1px solid var(--line);border-radius:var(--radius);
   padding:12px 13px 11px;box-shadow:var(--shadow-sm);position:relative;
@@ -269,12 +275,13 @@ input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inh
 .btn-done:active{background:var(--ink);color:#FFF;transform:scale(.96)}
 
 /* 빈 상태 */
-.empty{text-align:center;padding:44px 18px 40px;color:var(--ink-3)}
+.empty{text-align:center;padding:36px 18px;color:var(--ink-3)}
 .empty .emo{
   width:64px;height:64px;border-radius:21px;background:var(--cream-2);margin:0 auto 15px;
-  display:grid;place-items:center;font-size:26px;line-height:1;
-  border:1px solid var(--hair);filter:grayscale(1);
+  display:grid;place-items:center;line-height:1;color:var(--ink-3);
+  border:1px solid var(--hair);
 }
+.empty .emo svg{width:27px;height:27px;display:block}
 .empty b{
   display:block;font-size:14.5px;font-weight:800;color:var(--ink);
   letter-spacing:-0.035em;margin-bottom:7px;
@@ -584,15 +591,15 @@ input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inh
   <main class="screen" id="screen-fridge">
     <div class="summary">
       <button class="stat" data-jump="all">
-        <div class="k"><span class="ico i-all">🧺</span>전체 품목</div>
+        <div class="k"><span class="ico i-all" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 20 7.4v9.2L12 20.8 4 16.6V7.4z"/><path d="M4 7.4l8 4.2 8-4.2"/><path d="M12 11.6v9.2"/></svg></span>전체 품목</div>
         <div class="v" id="statTotal">0<small>종</small></div>
       </button>
       <button class="stat warn" data-jump="soon">
-        <div class="k"><span class="ico i-soon">⏳</span>임박 3일</div>
+        <div class="k"><span class="ico i-soon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.1"/><path d="M12 7.4V12l3.1 1.9"/></svg></span>임박 3일</div>
         <div class="v" id="statSoon">0<small>개</small></div>
       </button>
       <button class="stat muted" data-jump="expired">
-        <div class="k"><span class="ico i-exp">🍂</span>만료</div>
+        <div class="k"><span class="ico i-exp" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.1"/><path d="M12 7.8v4.6"/><path d="M12 16.2v.1"/></svg></span>만료</div>
         <div class="v" id="statExpired">0<small>개</small></div>
       </button>
     </div>
@@ -889,6 +896,14 @@ function iconBadge(name){
   return `<span class="item-icon" aria-hidden="true">${iconFor(name)}</span>`;
 }
 
+/* ---------- 빈 화면 선 아이콘 (모노톤) ---------- */
+const EMPTY_ICON = {
+  fridge:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5.6" y="2.6" width="12.8" height="18.8" rx="3.9"/><path d="M5.6 9.2h12.8"/><path d="M9 5.2v2.1"/></svg>`,
+  cart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 4.2h2.4l2.5 10.6h9.9"/><path d="M6.4 7.4h14.4l-1.9 6.1H7.6"/><circle cx="9.4" cy="18.6" r="1.35"/><circle cx="16.4" cy="18.6" r="1.35"/></svg>`,
+  meal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.6"/><circle cx="12" cy="12" r="3.7"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.6"/><path d="M16 16l4.2 4.2"/></svg>`
+};
+
 /* ---------- 식단 데이터 ---------- */
 const MEALS = [];
 
@@ -997,7 +1012,7 @@ function renderFridge(){
   const wrap = $('#invList');
   if(!list.length){
     wrap.innerHTML = `<div class="empty">
-      <div class="emo">${state.query ? '🔍' : '🧺'}</div>
+      <div class="emo">${state.query ? EMPTY_ICON.search : EMPTY_ICON.fridge}</div>
       <b>${state.query ? `“${esc(state.query)}” 검색 결과가 없어요` : '냉장고가 비어 있어요'}</b>
       <p>${state.query ? '다른 이름으로 찾아보거나<br/>전체 목록에서 다시 확인해 보세요' : '+ 버튼으로 직접 넣거나<br/>피클이에게 영수증·쿠팡 주문내역을 보내보세요'}</p>
     </div>`;
@@ -1067,7 +1082,7 @@ function renderMeals(){
     $('#weekStrip').innerHTML = '';
     $('#weekStrip').hidden = true;
     $('#mealList').innerHTML = `<div class="empty">
-      <div class="emo">🍽️</div>
+      <div class="emo">${EMPTY_ICON.meal}</div>
       <b>아직 추천된 식단이 없어요</b>
       <p>냉장고에 재료가 채워지면<br/>딱 맞는 일주일 식단을 추천해 드려요</p>
     </div>`;
@@ -1153,7 +1168,7 @@ function renderShop(){
     </section>`;
   }else{
     html = `<div class="empty">
-      <div class="emo">🛒</div>
+      <div class="emo">${EMPTY_ICON.cart}</div>
       <b>장보기 메모가 비어 있어요</b>
       <p>위 입력창에 살 것을 적으면<br/>바로 담깁니다</p>
     </div>`;
