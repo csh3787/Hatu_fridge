@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#FFFDF9" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="하투 냉장고" />
+<meta name="description" content="하투 냉장고 — 영수증 한 장이면 끝나는 우리 집 냉장고 재고 관리" />
+<title>하투 냉장고</title>
+
+<!-- 홈화면 추가용 아이콘 (귀여운 미니 냉장고) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23FFF6E6'/%3E%3Crect x='14' y='9' width='36' height='46' rx='13' fill='%23FFFFFF' stroke='%23FFB4A6' stroke-width='3'/%3E%3Cline x1='14' y1='27' x2='50' y2='27' stroke='%23FFD3CA' stroke-width='3'/%3E%3Ccircle cx='27' cy='18' r='2.6' fill='%235B4B44'/%3E%3Ccircle cx='38' cy='18' r='2.6' fill='%235B4B44'/%3E%3Cpath d='M29 23.5q3.6 3 7.2 0' stroke='%235B4B44' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M32 40c-4-2.8-5.8-4.8-5.8-6.6 0-1.6 1.2-2.8 2.8-2.8 1.2 0 2.2.6 3 1.9.8-1.3 1.8-1.9 3-1.9 1.6 0 2.8 1.2 2.8 2.8 0 1.8-1.8 3.8-5.8 6.6z' fill='%23FFC2B6'/%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+:root{
+  /* 배경 · 종이 */
+  --milk:#FFFFFF;
+  --cream:#FFFDF9;
+  --cream-2:#FFF8EB;
+  --cream-3:#FFF4E2;
+  --line:#F3ECE2;
+  --line-2:#FBF6EE;
+
+  /* 글자 */
+  --ink:#3F3733;
+  --ink-2:#7E726B;
+  --ink-3:#B6ABA2;
+
+  /* 파스텔 포인트 */
+  --peach:#FF8A7A;
+  --peach-deep:#F0705D;
+  --peach-soft:#FFEDE8;
+  --peach-line:#FFD6CD;
+  --butter:#FFD97D;
+  --butter-deep:#C79A2E;
+  --butter-soft:#FFF4D9;
+  --mint:#8FD3B6;
+  --mint-deep:#4E9B7C;
+  --mint-soft:#E9F7F0;
+  --lav:#C9C2F0;
+  --lav-deep:#7B72B8;
+  --lav-soft:#F1EEFC;
+  --sky:#A8D8F0;
+  --sky-deep:#4E90B4;
+  --sky-soft:#EAF5FC;
+
+  --radius:20px;
+  --radius-lg:24px;
+  --shadow-sm:0 2px 8px rgba(186,148,116,.06), 0 1px 2px rgba(186,148,116,.05);
+  --shadow-md:0 14px 34px -12px rgba(150,116,88,.22);
+  --nav-h:68px;
+  --pad:20px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:linear-gradient(180deg,#FFF6E6 0%, #FFFAF1 45%, #FFFDF9 100%);
+  background-attachment:fixed;
+  font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Noto Sans CJK KR","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-0.01em;
+  display:flex;
+  justify-content:center;
+  min-height:100dvh;
+}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;letter-spacing:inherit}
+input,select{font-family:inherit;font-size:16px;color:inherit;letter-spacing:inherit}
+::selection{background:var(--peach-soft)}
+
+/* ── 폰 프레임 ───────────────────────────── */
+.phone{
+  width:100%;
+  max-width:430px;
+  min-height:100dvh;
+  background:var(--cream);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 80px rgba(176,138,96,.14);
+}
+@media (min-width:520px){
+  .phone{border-left:1.5px solid rgba(255,255,255,.8);border-right:1.5px solid rgba(255,255,255,.8)}
+}
+
+/* ── 헤더 ───────────────────────────── */
+.app-header{
+  position:sticky;top:0;z-index:40;
+  padding:calc(15px + env(safe-area-inset-top)) var(--pad) 12px;
+  background:linear-gradient(180deg,#FFF6E6 0%, #FFFBF2 70%, #FFFDF9 100%);
+  transition:box-shadow .2s ease;
+}
+.app-header.scrolled{
+  box-shadow:0 8px 22px -18px rgba(150,116,88,.6);
+  border-bottom:1.5px solid var(--line-2);
+}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-mark{
+  width:44px;height:44px;border-radius:16px;flex:none;
+  background:linear-gradient(155deg,#FFFFFF 0%, #FFF2E4 100%);
+  border:1.5px solid #FFE3D8;display:grid;place-items:center;
+  box-shadow:0 4px 12px -4px rgba(255,150,124,.35), inset 0 1px 0 #FFF;
+}
+.brand-mark svg{width:31px;height:34px;display:block}
+.brand-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.app-title{
+  font-size:19px;font-weight:800;letter-spacing:-0.045em;line-height:1.15;
+  display:flex;align-items:center;gap:5px;
+}
+.app-title .spk{display:inline-flex;transform:translateY(-2px)}
+.app-sub{
+  font-size:11px;color:var(--ink-3);letter-spacing:0.01em;
+  display:flex;align-items:center;gap:4px;
+}
+.app-sub::before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--mint);flex:none;
+  box-shadow:0 0 0 3px rgba(143,211,182,.22);
+}
+.share-pill{
+  display:inline-flex;align-items:center;gap:5px;flex:none;
+  padding:7px 11px 7px 9px;border-radius:999px;
+  background:var(--milk);border:1.5px solid var(--line);
+  font-size:11px;color:var(--ink-2);font-weight:600;box-shadow:var(--shadow-sm);
+  white-space:nowrap;
+}
+.share-pill .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--mint);flex:none;
+  box-shadow:0 0 0 0 rgba(143,211,182,.7);animation:pulse 2.4s infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(143,211,182,.65)}
+  70%{box-shadow:0 0 0 6px rgba(143,211,182,0)}
+  100%{box-shadow:0 0 0 0 rgba(143,211,182,0)}
+}
+.share-pill b{font-weight:700;color:var(--ink)}
+.share-pill .heart{color:var(--peach);font-size:9px}
+
+/* ── 본문 ───────────────────────────── */
+.screen{flex:1;padding:0 var(--pad) calc(var(--nav-h) + 44px + env(safe-area-inset-bottom));animation:fade .28s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* 요약 위젯 */
+.summary{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin:4px 0 14px;
+}
+.stat{
+  background:var(--milk);border:1.5px solid var(--line);border-radius:18px;
+  padding:10px 11px 11px;box-shadow:var(--shadow-sm);text-align:left;
+  display:flex;flex-direction:column;gap:6px;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.stat:active{transform:scale(.975)}
+.stat .k{
+  font-size:10.5px;color:var(--ink-3);font-weight:700;letter-spacing:-0.01em;
+  display:flex;align-items:center;gap:5px;
+}
+.stat .ico{
+  width:22px;height:22px;border-radius:8px;display:grid;place-items:center;
+  font-size:12px;flex:none;line-height:1;
+}
+.stat .ico.i-all{background:var(--sky-soft)}
+.stat .ico.i-soon{background:var(--butter-soft)}
+.stat .ico.i-exp{background:var(--peach-soft)}
+.stat .v{
+  font-size:21px;font-weight:800;letter-spacing:-0.05em;line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.stat .v small{font-size:10.5px;font-weight:600;color:var(--ink-3);margin-left:2px;letter-spacing:0}
+.stat.warn .v{color:var(--peach-deep)}
+.stat.muted .v{color:var(--ink-3)}
+.stat.is-on{border-color:var(--peach);box-shadow:0 0 0 3px var(--peach-soft)}
+
+/* 검색 */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3)}
+.search{
+  width:100%;height:46px;border-radius:16px;border:1.5px solid var(--line);
+  background:var(--milk);padding:0 40px 0 40px;font-size:14px;outline:none;
+  transition:border-color .16s, box-shadow .16s;-webkit-appearance:none;appearance:none;
+  box-shadow:var(--shadow-sm);
+}
+.search::-webkit-search-cancel-button,.search::-webkit-search-decoration{-webkit-appearance:none;display:none}
+.search::placeholder{color:var(--ink-3)}
+.search:focus{border-color:var(--peach-line);box-shadow:0 0 0 3px var(--peach-soft)}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:none;place-items:center;color:var(--ink-3);background:var(--cream-2)}
+.search-clear.show{display:grid}
+
+/* 칩 */
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 calc(var(--pad) * -1) 12px;padding:1px var(--pad) 3px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:none;height:35px;padding:0 17px;border-radius:999px;border:1.5px solid var(--line);
+  background:var(--milk);font-size:12.5px;font-weight:600;color:var(--ink-2);
+  display:inline-flex;align-items:center;gap:6px;transition:all .16s ease;
+  box-shadow:var(--shadow-sm);
+}
+.chip:active{transform:scale(.96)}
+.chip.on{
+  background:var(--peach);border-color:var(--peach);color:#FFF;font-weight:700;
+  box-shadow:0 6px 14px -6px rgba(255,138,122,.75);
+}
+.chip .n{font-size:10.5px;opacity:.62;font-weight:700;font-variant-numeric:tabular-nums}
+.chip.on .n{opacity:.85}
+.sort-btn{
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-3);font-weight:600;
+  padding:5px 2px;transition:color .15s;
+}
+.sort-btn:active{color:var(--peach-deep)}
+.sort-btn.on{color:var(--ink-2)}
+
+/* 재고 카드 */
+.list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;padding:0 2px}
+.list-head h2{font-size:13px;font-weight:700;color:var(--ink-2);margin:0;letter-spacing:-0.02em}
+.list-head span{font-size:11px;color:var(--ink-3)}
+
+.inv-list{display:flex;flex-direction:column;gap:8px}
+.item{
+  background:var(--milk);border:1.5px solid var(--line);border-radius:var(--radius);
+  padding:12px 13px 11px;box-shadow:var(--shadow-sm);position:relative;
+  transition:opacity .25s ease, transform .25s ease;
+}
+.item.done{opacity:.45}
+.item-main{display:flex;align-items:center;gap:11px}
+.item-icon{
+  width:44px;height:44px;border-radius:15px;flex:none;
+  display:grid;place-items:center;font-size:21px;line-height:1;
+  border:1px solid rgba(255,255,255,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.6);
+}
+.t-peach{background:var(--peach-soft)}
+.t-butter{background:var(--butter-soft)}
+.t-mint{background:var(--mint-soft)}
+.t-sky{background:var(--sky-soft)}
+.t-lav{background:var(--lav-soft)}
+.item-icon svg{width:23px;height:23px;display:block}
+.item-info{flex:1;min-width:0}
+.item-name{
+  font-size:15px;font-weight:700;letter-spacing:-0.03em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;
+}
+.item-meta{
+  font-size:11.5px;color:var(--ink-3);margin-top:4px;
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;line-height:1.3;
+}
+.item-meta .sep{width:2.5px;height:2.5px;border-radius:50%;background:#E4DAD0;flex:none}
+.loc-tag{
+  flex:none;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:6px;letter-spacing:0;
+}
+.loc-냉장{background:var(--sky-soft);color:var(--sky-deep)}
+.loc-냉동{background:var(--lav-soft);color:var(--lav-deep)}
+.loc-실온{background:var(--butter-soft);color:var(--butter-deep)}
+.badge{
+  flex:none;font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;letter-spacing:-0.01em;
+  font-variant-numeric:tabular-nums;
+}
+.badge.red{background:var(--peach-soft);color:var(--peach-deep)}
+.badge.amber{background:var(--butter-soft);color:var(--butter-deep)}
+.badge.green{background:var(--mint-soft);color:var(--mint-deep)}
+.badge.expired{background:#F0EBE5;color:#9A8E84}
+.item-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.stepper{display:flex;align-items:center;gap:2px;background:var(--cream-2);border-radius:999px;padding:3px}
+.stepper button{
+  width:29px;height:29px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);
+  font-size:16px;font-weight:600;transition:background .14s, transform .14s;
+}
+.stepper button:active{transform:scale(.9);background:#FFF}
+.stepper button:disabled{opacity:.25}
+.stepper .qty{
+  min-width:36px;text-align:center;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;
+  color:var(--ink);
+}
+.stepper .qty small{font-size:10px;font-weight:600;color:var(--ink-3);margin-left:1px}
+.btn-done{
+  font-size:11.5px;font-weight:700;color:var(--ink-2);padding:8px 13px;border-radius:999px;
+  background:var(--cream-2);transition:all .15s;
+}
+.btn-done:active{background:var(--mint-soft);color:var(--mint-deep);transform:scale(.96)}
+
+.empty{text-align:center;padding:52px 20px;color:var(--ink-3)}
+.empty .emo{
+  width:64px;height:64px;border-radius:22px;background:var(--cream-2);margin:0 auto 14px;
+  display:grid;place-items:center;font-size:28px;opacity:.95;
+}
+.empty p{margin:0;font-size:12.5px;line-height:1.75}
+.empty p b{color:var(--ink-2);font-weight:700}
+
+/* ── 식단 탭 ───────────────────────────── */
+.tab-intro{margin:2px 0 15px}
+.tab-intro h2{font-size:20px;font-weight:800;letter-spacing:-0.045em;margin:0 0 6px}
+.tab-intro p{font-size:12.5px;color:var(--ink-2);margin:0;line-height:1.65}
+.tab-intro p b{color:var(--peach-deep);font-weight:700}
+
+.week-strip{display:flex;gap:6px;margin:0 calc(var(--pad) * -1) 14px;padding:0 var(--pad);overflow-x:auto;scrollbar-width:none}
+.week-strip::-webkit-scrollbar{display:none}
+.day-pill{
+  flex:none;width:44px;padding:8px 0 7px;border-radius:15px;background:var(--milk);
+  border:1.5px solid var(--line);text-align:center;box-shadow:var(--shadow-sm);
+}
+.day-pill .d{font-size:11px;color:var(--ink-3);font-weight:600}
+.day-pill .n{font-size:15px;font-weight:800;margin-top:1px;letter-spacing:-0.03em}
+.day-pill.today{background:var(--peach);border-color:var(--peach);box-shadow:0 6px 14px -6px rgba(255,138,122,.75)}
+.day-pill.today .d,.day-pill.today .n{color:#FFF}
+
+.meal{
+  background:var(--milk);border:1.5px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);margin-bottom:10px;overflow:hidden;
+  transition:box-shadow .2s ease, border-color .2s ease;
+}
+.meal.open{box-shadow:var(--shadow-md);border-color:var(--peach-line)}
+.meal.today{border-color:var(--peach-line)}
+.meal-head{padding:14px 15px 13px;display:flex;gap:11px;align-items:center;width:100%;text-align:left}
+.day-badge{
+  flex:none;width:42px;height:42px;border-radius:14px;background:var(--cream-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;
+}
+.day-badge .d{font-size:11.5px;font-weight:800;color:var(--ink-2)}
+.day-badge .dt{font-size:9px;color:var(--ink-3);margin-top:2px;letter-spacing:-0.02em;font-weight:600}
+.meal.today .day-badge{background:var(--peach-soft)}
+.meal.today .day-badge .d{color:var(--peach-deep)}
+.meal-main{flex:1;min-width:0}
+.meal-kids{
+  font-size:14.5px;font-weight:700;letter-spacing:-0.03em;line-height:1.35;color:var(--ink);
+  display:flex;align-items:flex-start;gap:5px;
+}
+.meal-kids .menu-emo{font-size:14px;line-height:1.35;flex:none}
+.meal-adult{font-size:12px;color:var(--ink-2);margin-top:5px;display:flex;align-items:center;gap:5px;line-height:1.35}
+.meal-adult .tag{
+  font-size:9px;font-weight:800;color:var(--mint-deep);background:var(--mint-soft);
+  padding:2px 5px;border-radius:5px;flex:none;letter-spacing:0;
+}
+.meal-side{flex:none;display:flex;align-items:center;gap:4px}
+.match-badge{
+  font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:999px;
+  background:var(--mint-soft);color:var(--mint-deep);white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.match-badge.low{background:var(--butter-soft);color:var(--butter-deep)}
+.chev{color:var(--ink-3);transition:transform .25s ease;display:grid;place-items:center}
+.meal.open .chev{transform:rotate(180deg);color:var(--peach)}
+
+.meal-body{display:none;padding:0 15px 15px}
+.meal.open .meal-body{display:block;animation:slide .25s ease both}
+@keyframes slide{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+.ing-block{margin-top:0}
+.ing-title{font-size:10.5px;font-weight:700;color:var(--ink-3);letter-spacing:0.01em;margin:0 0 7px}
+.ing-row{display:flex;flex-wrap:wrap;gap:5px}
+.ing{
+  font-size:11.5px;padding:5px 9px;border-radius:9px;display:inline-flex;align-items:center;gap:4px;
+  background:var(--cream-2);color:var(--ink-2);font-weight:600;
+}
+.ing.have{background:var(--mint-soft);color:var(--mint-deep)}
+.ing.have::before{content:"✓";font-size:9px;opacity:.9}
+.ing.need{background:#FFF6F3;color:var(--peach-deep);border:1px dashed var(--peach-line)}
+.ing.need::before{content:"+";font-size:11px;opacity:.85;font-weight:800}
+.divider{height:1.5px;background:var(--line-2);margin:13px 0 11px;border-radius:2px}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{
+  position:relative;padding-left:25px;font-size:12.5px;line-height:1.65;color:var(--ink-2);
+  margin-bottom:7px;
+}
+.steps li:last-child{margin-bottom:0}
+.steps li::before{
+  counter-increment:s;content:counter(s);
+  position:absolute;left:0;top:1px;width:17px;height:17px;border-radius:50%;
+  background:var(--peach-soft);color:var(--peach-deep);font-size:9.5px;font-weight:800;
+  display:grid;place-items:center;
+}
+.meal-tip{
+  margin-top:12px;background:var(--butter-soft);border-radius:13px;padding:10px 12px;font-size:11.5px;
+  color:#8E7434;line-height:1.6;display:flex;gap:7px;
+}
+.meal-tip b{color:#7C6428;font-weight:700}
+.meal-foot{display:flex;gap:8px;margin-top:12px}
+.btn-soft{
+  flex:1;height:40px;border-radius:999px;background:var(--cream-2);font-size:12px;font-weight:700;color:var(--ink-2);
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;
+}
+.btn-soft:active{transform:scale(.97);background:#FFF1DC}
+.btn-soft.primary{background:var(--ink);color:#FFF}
+.btn-soft.primary:active{background:#2E2825}
+
+/* ── 장보기 탭 ───────────────────────────── */
+.shop-add{display:flex;gap:8px;margin-bottom:15px}
+.shop-add input{
+  flex:1;height:46px;border-radius:16px;border:1.5px solid var(--line);background:var(--milk);
+  padding:0 15px;font-size:14px;outline:none;min-width:0;box-shadow:var(--shadow-sm);
+}
+.shop-add input::placeholder{color:var(--ink-3)}
+.shop-add input:focus{border-color:var(--peach-line);box-shadow:0 0 0 3px var(--peach-soft)}
+.btn-add{
+  width:46px;height:46px;border-radius:16px;background:var(--peach);color:#FFF;display:grid;place-items:center;
+  flex:none;transition:transform .15s;box-shadow:0 6px 14px -6px rgba(255,138,122,.8);
+}
+.btn-add:active{transform:scale(.93)}
+
+.shop-group{margin-bottom:16px}
+.shop-group h3{
+  font-size:11px;font-weight:700;color:var(--ink-3);margin:0 0 8px;padding-left:3px;letter-spacing:0.01em;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.shop-group h3 span{font-weight:600;color:#C6BBAF}
+.shop-card{background:var(--milk);border:1.5px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+.shop-row{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1.5px solid var(--line-2)}
+.shop-row:last-child{border-bottom:0}
+.check{
+  width:23px;height:23px;border-radius:9px;border:1.5px solid #EBDFD2;flex:none;display:grid;place-items:center;
+  transition:all .16s ease;background:#FFF;
+}
+.check svg{width:12px;height:12px;color:#FFF;opacity:0;transform:scale(.6);transition:all .16s ease}
+.shop-row.checked .check{background:var(--mint);border-color:var(--mint)}
+.shop-row.checked .check svg{opacity:1;transform:none}
+.shop-name{flex:1;font-size:14px;font-weight:600;min-width:0;line-height:1.4}
+.shop-row.checked .shop-name{color:var(--ink-3);text-decoration:line-through;text-decoration-color:#D5CBC1}
+.shop-from{
+  font-size:10px;color:var(--ink-3);flex:none;background:var(--cream-2);
+  padding:3px 7px;border-radius:999px;font-weight:600;white-space:nowrap;
+}
+.shop-del{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;color:#D3C8BC;flex:none}
+.shop-del:active{background:var(--peach-soft);color:var(--peach-deep)}
+
+.shop-bar{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(130%);width:100%;max-width:430px;
+  bottom:calc(var(--nav-h) + 10px + env(safe-area-inset-bottom));
+  padding:0 var(--pad);z-index:45;transition:transform .28s cubic-bezier(.2,.8,.3,1);
+}
+.shop-bar.show{transform:translateX(-50%) translateY(0)}
+.shop-bar button{
+  width:100%;height:54px;border-radius:18px;
+  background:linear-gradient(135deg,#FF9C8C 0%, #FF8A7A 100%);color:#FFF;
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  box-shadow:0 14px 28px -10px rgba(240,112,93,.65);font-size:13.5px;font-weight:700;
+}
+.shop-bar button .right{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:rgba(255,255,255,.88);font-weight:600}
+.shop-bar button:active{transform:scale(.985)}
+
+/* ── FAB ───────────────────────────── */
+.fab{
+  position:fixed;z-index:44;right:calc(50% - 215px + var(--pad));
+  bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom));
+  width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(140deg,#FFA896 0%, #FF8A7A 100%);color:#FFF;display:grid;place-items:center;
+  box-shadow:0 12px 24px -8px rgba(240,112,93,.6), 0 0 0 5px rgba(255,253,249,.95);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.fab svg{width:23px;height:23px}
+.fab:active{transform:scale(.92)}
+.fab.hide{opacity:0;pointer-events:none;transform:translateY(10px)}
+@media (max-width:430px){ .fab{right:var(--pad)} }
+
+/* ── 하단 네비 ───────────────────────────── */
+.nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;
+  height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:rgba(255,253,249,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1.5px solid var(--line);display:flex;
+}
+.nav button{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--ink-3);font-size:10.5px;font-weight:600;position:relative;transition:color .18s;
+}
+.nav .ico-wrap{
+  width:40px;height:30px;border-radius:999px;display:grid;place-items:center;
+  transition:background .2s ease, transform .2s ease;
+}
+.nav button svg{width:22px;height:22px;stroke-width:1.9;transition:transform .2s ease}
+.nav button.on{color:var(--peach-deep);font-weight:800}
+.nav button.on .ico-wrap{background:var(--peach-soft)}
+.nav button.on svg{transform:translateY(-1px) scale(1.04)}
+.nav .badge-dot[hidden]{display:none}
+.nav .badge-dot{
+  position:absolute;top:9px;right:calc(50% - 19px);min-width:16px;height:16px;border-radius:999px;
+  background:var(--peach);color:#FFF;font-size:9px;font-weight:800;display:grid;place-items:center;padding:0 4px;
+  border:2px solid var(--cream);font-variant-numeric:tabular-nums;
+}
+
+/* ── 모달 ───────────────────────────── */
+.scrim{
+  position:fixed;inset:0;background:rgba(84,64,50,.28);z-index:60;opacity:0;pointer-events:none;
+  transition:opacity .25s ease;backdrop-filter:blur(3px);
+}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(102%);width:100%;max-width:430px;z-index:61;
+  bottom:0;background:var(--milk);border-radius:28px 28px 0 0;padding:8px var(--pad) calc(20px + env(safe-area-inset-bottom));
+  transition:transform .32s cubic-bezier(.2,.85,.3,1);max-height:92dvh;overflow-y:auto;
+  box-shadow:0 -12px 44px rgba(140,105,72,.22);
+}
+.sheet.show{transform:translateX(-50%) translateY(0)}
+.sheet-handle{width:40px;height:4px;border-radius:999px;background:#F0E4D6;margin:2px auto 14px}
+.sheet h2{font-size:17.5px;font-weight:800;letter-spacing:-0.035em;margin:0 0 4px}
+.sheet .sub{font-size:12px;color:var(--ink-3);margin:0 0 16px;line-height:1.55}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px}
+.field input,.field select{
+  width:100%;height:46px;border-radius:14px;border:1.5px solid var(--line);background:var(--cream-2);
+  padding:0 13px;font-size:15px;outline:none;appearance:none;
+}
+.field select{
+  padding-right:36px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B6ABA2' stroke-width='2.4' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;background-size:14px;
+}
+.field input:focus,.field select:focus{border-color:var(--peach-line);background:#FFF;box-shadow:0 0 0 3px var(--peach-soft)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sheet-actions{display:flex;gap:9px;margin-top:18px}
+.sheet-actions button{flex:1;height:52px;border-radius:17px;font-size:14px;font-weight:700}
+.btn-cancel{background:var(--cream-2);color:var(--ink-2)}
+.btn-save{background:linear-gradient(135deg,#FF9C8C 0%, #FF8A7A 100%);color:#FFF;box-shadow:0 10px 20px -8px rgba(240,112,93,.6)}
+.btn-save:active{transform:scale(.98)}
+
+/* 이동 시트 목록 */
+.move-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.move-row{background:var(--cream-2);border-radius:15px;padding:11px 12px}
+.move-row .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.move-row .nm{font-size:13.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.move-row .ctrls{display:flex;gap:5px;flex:none}
+.move-row select,.move-row input{
+  height:34px;border-radius:10px;border:1.5px solid var(--line);background:#FFF;font-size:12px;
+  padding:0 8px;outline:none;
+}
+.move-row input{width:126px}
+
+/* 토스트 */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(18px);z-index:80;
+  bottom:calc(var(--nav-h) + 76px + env(safe-area-inset-bottom));
+  background:rgba(63,55,51,.95);color:#FFF;font-size:12.5px;font-weight:600;
+  padding:11px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:all .26s ease;
+  max-width:86%;text-align:center;backdrop-filter:blur(8px);
+  box-shadow:0 10px 24px -10px rgba(63,55,51,.6);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast b{color:#FFCFC5;font-weight:800}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+  <header class="app-header">
+    <div class="header-row">
+      <div class="brand">
+        <!-- 귀여운 미니 냉장고 마스코트 -->
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 52" fill="none">
+            <rect x="8" y="6" width="32" height="43" rx="13" fill="#FFFFFF" stroke="#FFA793" stroke-width="2.2"/>
+            <line x1="8" y1="24" x2="40" y2="24" stroke="#FFCBBD" stroke-width="2"/>
+            <!-- 손잡이 -->
+            <rect x="13" y="12" width="3.4" height="7.4" rx="1.7" fill="#FFB3A0"/>
+            <rect x="13" y="28.4" width="3.4" height="9" rx="1.7" fill="#FFB3A0"/>
+            <!-- 반짝이는 눈 -->
+            <circle cx="23.6" cy="15" r="2.5" fill="#57463F"/>
+            <circle cx="22.7" cy="14.1" r="0.95" fill="#FFFFFF"/>
+            <circle cx="30.6" cy="15" r="2.5" fill="#57463F"/>
+            <circle cx="29.7" cy="14.1" r="0.95" fill="#FFFFFF"/>
+            <!-- 웃는 입 -->
+            <path d="M23.8 19.6q3.4 2.9 6.8 0" stroke="#57463F" stroke-width="1.7" stroke-linecap="round"/>
+            <!-- 볼터치 -->
+            <ellipse cx="19.4" cy="19.2" rx="1.9" ry="1.4" fill="#FFBDB0"/>
+            <ellipse cx="34.8" cy="19.2" rx="1.9" ry="1.4" fill="#FFBDB0"/>
+            <!-- 아래칸 하트 -->
+            <path d="M24 37.6c-3.6-2.6-5.2-4.3-5.2-6 0-1.6 1.2-2.6 2.6-2.6 1 0 1.9.6 2.6 1.7.7-1.1 1.6-1.7 2.6-1.7 1.4 0 2.6 1 2.6 2.6 0 1.7-1.6 3.4-5.2 6z" fill="#FFBDB0"/>
+            <!-- 반짝임 -->
+            <path d="M41.4 1.6l1.3 3 3 1.3-3 1.3-1.3 3-1.3-3-3-1.3 3-1.3z" fill="#FFD97D"/>
+            <circle cx="43.4" cy="12.4" r="1.15" fill="#B8E3CE"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="app-title">
+            하투 냉장고
+            <span class="spk" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="#FF8A7A"><path d="M12 2l2.2 5.6L20 9.8l-5.8 2.2L12 18l-2.2-6L4 9.8l5.8-2.2z"/></svg>
+            </span>
+          </div>
+          <div class="app-sub" id="syncText">방금 동기화됨</div>
+        </div>
+      </div>
+      <div class="share-pill" title="남편과 실시간 공유 중">
+        <span class="dot"></span>
+        <span><b>세화</b> <span class="heart">♥</span> <b>도현</b></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 냉장고 탭 -->
+  <main class="screen" id="screen-fridge">
+    <div class="summary">
+      <button class="stat" data-jump="all">
+        <div class="k"><span class="ico i-all">🧺</span>전체 품목</div>
+        <div class="v" id="statTotal">0<small>종</small></div>
+      </button>
+      <button class="stat warn" data-jump="soon">
+        <div class="k"><span class="ico i-soon">⏳</span>임박 3일</div>
+        <div class="v" id="statSoon">0<small>개</small></div>
+      </button>
+      <button class="stat muted" data-jump="expired">
+        <div class="k"><span class="ico i-exp">🍂</span>만료</div>
+        <div class="v" id="statExpired">0<small>개</small></div>
+      </button>
+    </div>
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <input class="search" id="searchInput" type="text" placeholder="품목 검색 (예: 두부)" autocomplete="off" />
+      <button class="search-clear" id="searchClear" aria-label="검색어 지우기">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="chips" id="locChips">
+      <button class="chip on" data-loc="전체">전체 <span class="n" id="cn-all"></span></button>
+      <button class="chip" data-loc="냉장">냉장 <span class="n" id="cn-냉장"></span></button>
+      <button class="chip" data-loc="냉동">냉동 <span class="n" id="cn-냉동"></span></button>
+      <button class="chip" data-loc="실온">실온 <span class="n" id="cn-실온"></span></button>
+    </div>
+
+    <div class="list-head">
+      <h2 id="listTitle">냉장고 안</h2>
+      <button class="sort-btn" id="sortChip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="16" y2="7"/><line x1="4" y1="12" x2="12" y2="12"/><line x1="4" y1="17" x2="9" y2="17"/><polyline points="17 14 20 17 23 14"/></svg>
+        <span id="sortLabel">유통기한 임박순</span>
+      </button>
+    </div>
+    <div class="inv-list" id="invList"></div>
+  </main>
+
+  <!-- 식단 탭 -->
+  <main class="screen" id="screen-meal" hidden>
+    <div class="tab-intro">
+      <h2>이번 주 식단</h2>
+      <p>냉장고에 있는 재료로 짠 <b>아이 반찬 + 어른 메뉴</b> 7일 식단이에요.<br/>부족한 재료는 장보기로 바로 담을 수 있어요.</p>
+    </div>
+    <div class="week-strip" id="weekStrip"></div>
+    <div id="mealList"></div>
+  </main>
+
+  <!-- 장보기 탭 -->
+  <main class="screen" id="screen-shop" hidden>
+    <div class="tab-intro">
+      <h2>장보기</h2>
+      <p>체크한 항목은 한 번에 <b>냉장고로 옮길 수</b> 있어요.</p>
+    </div>
+    <div class="shop-add">
+      <input id="shopInput" type="text" placeholder="살 것 추가 (예: 우유 1팩)" autocomplete="off" />
+      <button class="btn-add" id="shopAddBtn" aria-label="추가">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <div id="shopList"></div>
+  </main>
+
+  <!-- 하단 네비 -->
+  <nav class="nav" id="nav">
+    <button class="on" data-tab="fridge">
+      <span class="ico-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="3" width="14" height="18" rx="4.4"/><line x1="5" y1="10.4" x2="19" y2="10.4"/><line x1="9.3" y1="6.2" x2="9.3" y2="8.2"/>
+        </svg>
+      </span>
+      <span>냉장고</span>
+    </button>
+    <button data-tab="meal">
+      <span class="ico-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.8 11.6h16.4a8.2 8.2 0 0 1-16.4 0Z"/><path d="M9 20.2h6"/>
+          <path d="M8.6 3.2v2.4M12 2.2v3.4M15.4 3.2v2.4"/>
+        </svg>
+      </span>
+      <span>일주일 식단</span>
+    </button>
+    <button data-tab="shop">
+      <span class="ico-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.6 8.4h16.8l-1.5 9.3a2.1 2.1 0 0 1-2.1 1.8H7.2a2.1 2.1 0 0 1-2.1-1.8L3.6 8.4Z"/>
+          <path d="M8.5 8.4V7a3.5 3.5 0 0 1 7 0v1.4"/>
+        </svg>
+      </span>
+      <span>장보기</span>
+      <span class="badge-dot" id="shopBadge" hidden>0</span>
+    </button>
+  </nav>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" aria-label="품목 추가">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- 장보기 → 냉장고 이동 바 -->
+  <div class="shop-bar" id="shopBar">
+    <button id="moveBtn">
+      <span id="moveLabel">선택 0개 냉장고로 옮기기</span>
+      <span class="right">위치·기한 설정 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg></span>
+    </button>
+  </div>
+</div>
+
+<!-- 스크림 & 시트 -->
+<div class="scrim" id="scrim"></div>
+
+<!-- 품목 추가 시트 -->
+<section class="sheet" id="addSheet" aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <h2 id="addSheetTitle">품목 추가</h2>
+  <p class="sub">영수증을 삐클이에게 보내면 자동으로 채워드려요. 직접 넣을 수도 있어요.</p>
+  <form id="addForm" autocomplete="off">
+    <div class="field">
+      <label for="fName">품목명</label>
+      <input id="fName" type="text" placeholder="예: 서울우유" required />
+    </div>
+    <div class="field">
+      <label for="fLoc">보관 위치</label>
+      <select id="fLoc">
+        <option>냉장</option><option>냉동</option><option>실온</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="fAmount">용량</label>
+        <input id="fAmount" type="text" placeholder="예: 900ml" />
+      </div>
+      <div class="field">
+        <label for="fQty">수량</label>
+        <input id="fQty" type="number" min="1" step="1" value="1" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="fExp">유통기한</label>
+      <input id="fExp" type="date" required />
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-cancel" data-close>취소</button>
+      <button type="submit" class="btn-save" id="addSaveBtn">냉장고에 넣기</button>
+    </div>
+  </form>
+</section>
+
+<!-- 장보기 → 냉장고 이동 시트 -->
+<section class="sheet" id="moveSheet" aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <h2>냉장고로 옮기기</h2>
+  <p class="sub">보관 위치와 유통기한을 확인하고 넣어주세요.</p>
+  <div class="move-list" id="moveList"></div>
+  <div class="sheet-actions">
+    <button type="button" class="btn-cancel" data-close>취소</button>
+    <button type="button" class="btn-save" id="moveConfirm">냉장고에 넣기</button>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   하투 냉장고 — 프로토타입
+   데이터 계층은 StorageAdapter 하나로 모아두었습니다.
+   실시간 공유(Firebase / Supabase / Sheets)로 바꿀 때는
+   아래 어댑터의 5개 메서드만 교체하면 됩니다.
+   ========================================================= */
+
+/* ---------- 날짜 유틸 ---------- */
+const DAY = 86400000;
+function today0(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function ymd(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function addDays(d, n){ const x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function parseYMD(s){
+  if(!s) return null;
+  const [y,m,d] = s.split('-').map(Number);
+  if(!y||!m||!d) return null;
+  return new Date(y, m-1, d);
+}
+function dday(expStr){
+  const e = parseYMD(expStr); if(!e) return null;
+  return Math.round((e.getTime() - today0().getTime()) / DAY);
+}
+function ddayLabel(n){
+  if(n === null) return '';
+  if(n < 0) return `만료 ${Math.abs(n)}일`;
+  if(n === 0) return 'D-DAY';
+  return `D-${n}`;
+}
+function shortDate(s){
+  const d = parseYMD(s); if(!d) return '';
+  return `${d.getMonth()+1}.${String(d.getDate()).padStart(2,'0')}`;
+}
+const WD = ['일','월','화','수','목','금','토'];
+
+/* ---------- 초기 샘플 (한국·아이 있는 집 기준) ---------- */
+function seedInventory(){
+  const t = today0();
+  const mk = (name, amount, qty, location, offset) => ({
+    id: uid(), name, amount, qty, location, expiresAt: ymd(addDays(t, offset)),
+    addedAt: new Date().toISOString()
+  });
+  return [
+    mk('서울우유', '1.0L', 1, '냉장', 2),
+    mk('유정란', '15구', 1, '냉장', 5),
+    mk('두부', '300g', 1, '냉장', 1),
+    mk('한우 다짐육', '300g', 1, '냉장', 2),
+    mk('애호박', '1개', 1, '냉장', 4),
+    mk('어린이 요거트', '8입', 1, '냉장', 6),
+    mk('대파', '1단', 1, '냉장', 3),
+    mk('방울토마토', '500g', 1, '냉장', 4),
+    mk('포기김치', '1kg', 1, '냉장', 20),
+    mk('식빵', '400g', 1, '실온', 1),
+    mk('즉석밥', '210g', 4, '실온', 120),
+    mk('진간장', '500ml', 1, '실온', 200),
+    mk('냉동 아기만두', '500g', 1, '냉동', 45),
+    mk('무항생제 닭가슴살', '400g', 2, '냉동', 14),
+  ];
+}
+function seedShopping(){
+  const mk = (name, from) => ({ id: uid(), name, from, done: false, addedAt: new Date().toISOString() });
+  return [
+    mk('순두부 1팩', '월요일 식단'),
+    mk('양파 3개', '월요일 식단'),
+    mk('양상추 1통', '화요일 식단'),
+    mk('무 1/4개', '목요일 식단'),
+    mk('상추 1봉', '목요일 식단'),
+    mk('삼겹살 300g', '일요일 식단'),
+    mk('아이 간식 (요거트볼)', '직접 추가'),
+  ];
+}
+let _uidSeq = 0;
+function uid(){ return 'i' + Date.now().toString(36) + (_uidSeq++).toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* ---------- StorageAdapter (localStorage ↔ 실시간 DB 교체 지점) ---------- */
+const StorageAdapter = (() => {
+  const KEY = 'hatwoo-fridge-v1';
+  let memory = null;           // 로컬스토리지 차단 환경 폴백
+  let listeners = [];
+
+  function read(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){ /* 사파리 프라이빗 모드 등 */ }
+    if(memory) return memory;
+    const init = { inventory: seedInventory(), shopping: seedShopping(), updatedAt: new Date().toISOString() };
+    write(init);
+    return init;
+  }
+  function write(state){
+    state.updatedAt = new Date().toISOString();
+    memory = state;
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function emit(reason = 'local'){ listeners.forEach(fn => fn(reason)); }
+
+  // 다른 기기/탭에서 바뀐 내용 반영 (실시간 공유의 로컬 버전)
+  window.addEventListener('storage', (e) => {
+    if(e.key !== KEY) return;
+    memory = null;
+    emit('remote');
+  });
+
+  return {
+    /** @returns {{inventory:Array, shopping:Array, updatedAt:string}} */
+    async load(){ return read(); },
+    async saveInventory(list){
+      const s = read(); s.inventory = list; write(s); emit();
+    },
+    async saveShopping(list){
+      const s = read(); s.shopping = list; write(s); emit();
+    },
+    /** 재고·장보기를 한 번에 저장 (중간 상태가 다른 기기로 새지 않도록) */
+    async saveAll(inventory, shopping){
+      const s = read(); s.inventory = inventory; s.shopping = shopping; write(s); emit();
+    },
+    async setQty(id, qty){
+      const s = read();
+      const it = s.inventory.find(x => x.id === id);
+      if(!it) return;
+      it.qty = qty;
+      write(s); emit();
+    },
+    async removeItem(id){
+      const s = read();
+      s.inventory = s.inventory.filter(x => x.id !== id);
+      write(s); emit();
+    },
+    subscribe(fn){ listeners.push(fn); return () => { listeners = listeners.filter(f => f !== fn); }; },
+    /** 실시간 DB 연동 시 이 메서드가 서버 구독으로 바뀝니다. */
+    refresh: () => emit('local')
+  };
+})();
+
+/* ---------- 계획에 없던 결함 방지용 안전 유틸 ---------- */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 품목 아이콘 (둥근 파스텔 뱃지) ---------- */
+const ICON_RULES = [
+  ['서울우유','🥛'],['우유','🥛'],['생크림','🥛'],['연유','🥛'],
+  ['유정란','🥚'],['계란','🥚'],['달걀','🥚'],
+  ['한우','🥩'],['소고기','🥩'],['다짐육','🥩'],['불고기','🥩'],['삼겹살','🥓'],['돼지','🥓'],['베이컨','🥓'],
+  ['닭가슴살','🍗'],['닭','🍗'],['오리','🍗'],
+  ['만두','🥟'],
+  ['애호박','🥒'],['오이','🥒'],['호박','🥒'],
+  ['요거트','🍓'],['요구르트','🍓'],['딸기','🍓'],
+  ['대파','🧅'],['양파','🧅'],['파','🧅'],
+  ['토마토','🍅'],
+  ['김치','🥬'],['상추','🥬'],['양배추','🥬'],['시금치','🥬'],['깻잎','🥬'],['채소','🥬'],['샐러드','🥬'],
+  ['식빵','🍞'],['빵','🍞'],['토스트','🍞'],
+  ['즉석밥','🍚'],['밥','🍚'],['쌀','🍚'],['김가루','🍙'],['김','🍙'],
+  ['간장','🫙'],['소금','🧂'],['기름','🫗'],['참기름','🫗'],['양념','🫙'],
+  ['치즈','🧀'],
+  ['무','🥔'],['감자','🥔'],['당근','🥕'],['마늘','🧄'],['버섯','🍄'],['양송이','🍄'],
+  ['바나나','🍌'],['사과','🍎'],['귤','🍊'],['오렌지','🍊'],['포도','🍇'],['키위','🥝'],
+  ['스파게티','🍝'],['파스타','🍝'],['라면','🍜'],['국수','🍜'],
+  ['두부','tofu'],
+];
+const TONES = ['t-peach','t-butter','t-mint','t-sky','t-lav'];
+function toneFor(name){
+  let h = 7;
+  for(const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+  return TONES[h % TONES.length];
+}
+const TOFU_SVG = `<svg viewBox="0 0 24 24" fill="none"><path d="M6 9.6 12 6.6l6 3v5.6l-6 3.2-6-3.2z" fill="#FFFFFF" stroke="#D8C6B0" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 9.6 12 12.6l6-3" stroke="#D8C6B0" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 12.6v5.8" stroke="#D8C6B0" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+function iconFor(name){
+  const n = String(name || '');
+  for(const [key, emoji] of ICON_RULES){
+    if(n.includes(key)) return emoji === 'tofu' ? TOFU_SVG : emoji;
+  }
+  return '🥣';
+}
+function iconBadge(name){
+  return `<span class="item-icon ${toneFor(name)}" aria-hidden="true">${iconFor(name)}</span>`;
+}
+
+/* ---------- 식단 데이터 ---------- */
+const MEALS = [
+  {
+    day: '월', kids: '두부 달걀부침 & 애호박볶음', adult: '한우 순두부찌개',
+    time: '25분', emo: '🍲',
+    ing: [
+      { name:'두부', key:'두부' }, { name:'유정란', key:'계란' }, { name:'애호박', key:'애호박' },
+      { name:'한우 다짐육', key:'다짐육' }, { name:'대파', key:'대파' },
+      { name:'순두부', key:'순두부' }, { name:'양파', key:'양파' }
+    ],
+    steps: [
+      '두부는 1cm 두께로 썰어 물기를 빼고, 달걀은 풀어 소금 한 꼬집 넣어요.',
+      '팬에 두부를 노릇하게 굽고 달걀물을 부어 가장자리를 익혀 접시에 담아요.',
+      '애호박은 얇게 썰어 참기름에 볶고, 다짐육은 대파와 함께 볶아요.',
+      '순두부를 넣고 끓어오르면 양파·대파를 넣어 한소끔 마무리해요.'
+    ],
+    tip: '아이 몫은 달걀부침과 볶음만 덜어 국물을 빼고 주면 좋아요.'
+  },
+  {
+    day: '화', kids: '아기만두 & 과일 요거트', adult: '닭가슴살 스테이크 샐러드',
+    time: '20분', emo: '🥗',
+    ing: [
+      { name:'냉동 아기만두', key:'만두' }, { name:'어린이 요거트', key:'요거트' },
+      { name:'무항생제 닭가슴살', key:'닭가슴살' }, { name:'방울토마토', key:'토마토' },
+      { name:'양상추', key:'양상추' }, { name:'바나나', key:'바나나' }
+    ],
+    steps: [
+      '아기만두는 찜기에 8분 쪄서 아이 그릇에 담아요.',
+      '닭가슴살은 소금·후추로 밑간 후 팬에 앞뒤 3분씩 구워요.',
+      '양상추와 방울토마토를 한입 크기로 썰어 접시에 깔아요.',
+      '닭가슴살을 올리고 요거트에 올리브오일·레몬즙 비율 2:1로 만든 소스를 뿌려요.'
+    ],
+    tip: '남은 요거트는 바나나와 으깨 아이 디저트로 내도 좋아요.'
+  },
+  {
+    day: '수', kids: '계란찜 & 애호박전', adult: '김치볶음밥 + 치즈달걀프라이',
+    time: '25분', emo: '🍳',
+    ing: [
+      { name:'유정란', key:'계란' }, { name:'애호박', key:'애호박' }, { name:'포기김치', key:'김치' },
+      { name:'즉석밥', key:'즉석밥' }, { name:'대파', key:'대파' },
+      { name:'슬라이스 치즈', key:'치즈' }
+    ],
+    steps: [
+      '달걀 2개 + 물 100ml를 풀어 체에 걸고 뚜껑 덮어 중약불 8분 찜해요.',
+      '애호박은 얇게 썰어 소금 간 후 부침가루 묻혀 노릇하게 부쳐요.',
+      '김치는 잘게 썰어 볶다가 즉석밥을 넣고 함께 볶아요.',
+      '그릇에 담고 치즈를 올린 달걀프라이를 얹어 완성해요.'
+    ],
+    tip: '아이 계란찜은 간장 대신 참기름 한 방울로 간을 맞춰요.'
+  },
+  {
+    day: '목', kids: '한우 무국', adult: '두부조림 & 상추겉절이',
+    time: '30분', emo: '🥣',
+    ing: [
+      { name:'한우 다짐육', key:'다짐육' }, { name:'두부', key:'두부' }, { name:'대파', key:'대파' },
+      { name:'즉석밥', key:'즉석밥' }, { name:'무', key:'무' }, { name:'상추', key:'상추' }
+    ],
+    steps: [
+      '무는 나박썰기, 다짐육은 참기름에 볶다가 물을 부어 끓여요.',
+      '무가 투명해지면 국간장으로 간하고 대파를 넣어요.',
+      '두부는 두툼하게 썰어 간장·고춧가루·대파 양념장을 만들어 조려요.',
+      '상추는 손으로 뜯어 양념장(고추장·식초·설탕)에 버무려요.'
+    ],
+    tip: '아이 국은 건더기 위주로 덜어 국물 양을 조절해 주세요.'
+  },
+  {
+    day: '금', kids: '닭가슴살 야채죽', adult: '우유 크림 파스타',
+    time: '30분', emo: '🍝',
+    ing: [
+      { name:'무항생제 닭가슴살', key:'닭가슴살' }, { name:'애호박', key:'애호박' },
+      { name:'서울우유', key:'우유' }, { name:'대파', key:'대파' }, { name:'즉석밥', key:'즉석밥' },
+      { name:'스파게티면', key:'스파게티' }, { name:'생크림', key:'생크림' }, { name:'양파', key:'양파' }
+    ],
+    steps: [
+      '닭가슴살과 애호박을 잘게 다져 참기름에 볶아요.',
+      '밥과 물 400ml를 넣고 10분 끓여 죽 상태로 만들어요.',
+      '별도 팬에 양파를 볶고 우유·생크림을 넣어 소스를 만들어요.',
+      '삶은 스파게티면을 소스에 버무려 완성해요.'
+    ],
+    tip: '죽은 아이 먹기 좋은 온도로 식힌 뒤 소금 없이 간을 맞춰요.'
+  },
+  {
+    day: '토', kids: '한우 불고기 덮밥 (온 가족)', adult: '같은 메뉴 + 겉절이',
+    time: '25분', emo: '🍚',
+    ing: [
+      { name:'한우 다짐육', key:'다짐육' }, { name:'즉석밥', key:'즉석밥' }, { name:'대파', key:'대파' },
+      { name:'포기김치', key:'김치' }, { name:'양파', key:'양파' }, { name:'당근', key:'당근' },
+      { name:'불고기 양념', key:'불고기' }
+    ],
+    steps: [
+      '양파와 당근은 채썰고 대파는 송송 썰어요.',
+      '다짐육을 불고기 양념에 10분 재워요.',
+      '팬에 채소를 볶다가 고기를 넣고 센 불에 볶아요.',
+      '따뜻한 밥 위에 올리고 김치를 곁들여요.'
+    ],
+    tip: '아이 몫은 양념을 덜어내고 참기름만 살짝 둘러 주세요.'
+  },
+  {
+    day: '일', kids: '계란말이 & 김가루밥', adult: '두부김치 & 삼겹살구이',
+    time: '30분', emo: '🥘',
+    ing: [
+      { name:'유정란', key:'계란' }, { name:'즉석밥', key:'즉석밥' }, { name:'포기김치', key:'김치' },
+      { name:'두부', key:'두부' }, { name:'대파', key:'대파' },
+      { name:'삼겹살', key:'삼겹살' }, { name:'김가루', key:'김' }
+    ],
+    steps: [
+      '달걀 3개를 풀어 체에 걸고 팬에 얇게 부어 말아 계란말이를 만들어요.',
+      '밥에 참기름·김가루를 섞어 주먹밥 모양으로 뭉쳐요.',
+      '두부는 노릇하게 부쳐 김치와 함께 담아요.',
+      '삼겹살은 팬에 구워 대파·김치와 함께 상에 올려요.'
+    ],
+    tip: '아이 주먹밥은 한입 크기로, 김가루는 먹기 직전에 섞어요.'
+  }
+];
+
+/* ---------- 앱 상태 ---------- */
+const state = {
+  tab: 'fridge',
+  loc: '전체',
+  query: '',
+  statFilter: 'all',     // all | soon | expired
+  sort: 'expiry',        // expiry | name
+  expanded: new Set(),   // 펼친 식단 index
+  shopping: [],
+  inventory: [],
+  pendingMove: []
+};
+
+/* ---------- 공통: 토스트 ---------- */
+let toastTimer = null;
+function toast(html){
+  const el = $('#toast');
+  el.innerHTML = html;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ---------- 데이터 로드 & 구독 ---------- */
+async function boot(){
+  const s = await StorageAdapter.load();
+  state.inventory = s.inventory;
+  state.shopping = s.shopping;
+  setSyncText(s.updatedAt);
+  renderAll();
+  StorageAdapter.subscribe(async (reason) => {
+    const t = await StorageAdapter.load();
+    state.inventory = t.inventory;
+    state.shopping = t.shopping;
+    setSyncText(t.updatedAt);
+    renderAll();
+    if(reason === 'remote') toast('도현 님이 냉장고를 바꿨어요 · 실시간 공유 중');
+  });
+}
+function setSyncText(iso){
+  const el = $('#syncText');
+  if(!iso){ el.textContent = '방금 동기화됨'; return; }
+  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if(diff < 60) el.textContent = '방금 동기화됨';
+  else if(diff < 3600) el.textContent = `${Math.floor(diff/60)}분 전 동기화`;
+  else el.textContent = '오늘 동기화됨';
+}
+
+/* ---------- 냉장고 탭 ---------- */
+function filteredInventory(){
+  let list = state.inventory.slice();
+  if(state.loc !== '전체') list = list.filter(i => i.location === state.loc);
+  const q = state.query.trim().toLowerCase();
+  if(q) list = list.filter(i => i.name.toLowerCase().includes(q));
+  if(state.statFilter !== 'all'){
+    list = list.filter(i => {
+      const n = dday(i.expiresAt);
+      if(n === null) return false;
+      return state.statFilter === 'soon' ? (n >= 0 && n <= 3) : (n < 0);
+    });
+  }
+  if(state.sort === 'expiry'){
+    list.sort((a,b) => (dday(a.expiresAt) ?? 9999) - (dday(b.expiresAt) ?? 9999));
+  }else{
+    list.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+  }
+  return list;
+}
+
+function expiryClass(n){
+  if(n === null) return 'green';
+  if(n < 0) return 'expired';
+  if(n <= 3) return 'red';
+  if(n <= 7) return 'amber';
+  return 'green';
+}
+
+function renderFridge(){
+  const all = state.inventory;
+  const soon = all.filter(i => { const n = dday(i.expiresAt); return n !== null && n >= 0 && n <= 3; }).length;
+  const expired = all.filter(i => { const n = dday(i.expiresAt); return n !== null && n < 0; }).length;
+
+  $('#statTotal').innerHTML = `${all.length}<small>종</small>`;
+  $('#statSoon').innerHTML = `${soon}<small>개</small>`;
+  $('#statExpired').innerHTML = `${expired}<small>개</small>`;
+  $$('.stat').forEach(b => b.classList.remove('is-on'));
+
+  // 칩 카운트
+  const cnt = { '전체': all.length, '냉장': 0, '냉동': 0, '실온': 0 };
+  all.forEach(i => { if(cnt[i.location] !== undefined) cnt[i.location] += (1); });
+  $('#cn-all').textContent = cnt['전체'];
+  ['냉장','냉동','실온'].forEach(k => { $('#cn-' + k).textContent = cnt[k]; });
+  $$('#locChips .chip[data-loc]').forEach(c => c.classList.toggle('on', c.dataset.loc === state.loc));
+
+  const list = filteredInventory();
+  const titles = { all:'냉장고 안', soon:'유통기한 임박 (3일 내)', expired:'유통기한 지난 품목' };
+  $('#listTitle').textContent = state.query
+    ? `“${state.query}” 검색`
+    : (state.statFilter !== 'all' ? titles[state.statFilter] : (state.loc === '전체' ? '냉장고 안' : `${state.loc} 칸`));
+  $('#sortLabel').textContent = state.sort === 'expiry' ? '유통기한 임박순' : '이름순';
+  $('#sortChip').classList.toggle('on', state.sort === 'expiry');
+
+  const wrap = $('#invList');
+  if(!list.length){
+    wrap.innerHTML = `<div class="empty">
+      <div class="emo">${state.query ? '🔍' : '🧺'}</div>
+      <p>${state.query ? `“${esc(state.query)}” 에 해당하는 품목이 없어요.` : '냉장고가 비어 있어요.<br/><b>+ 추가</b>로 품목을 넣어보세요.'}</p>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(it => {
+    const n = dday(it.expiresAt);
+    const cls = expiryClass(n);
+    return `<article class="item" data-id="${it.id}">
+      <div class="item-main">
+        ${iconBadge(it.name)}
+        <div class="item-info">
+          <div class="item-name">${esc(it.name)}</div>
+          <div class="item-meta">
+            <span class="loc-tag loc-${esc(it.location)}">${esc(it.location)}</span>
+            <span>${esc(it.amount || '용량 미입력')}</span>
+            <span class="sep"></span>
+            <span>${shortDate(it.expiresAt)} 까지</span>
+          </div>
+        </div>
+        <span class="badge ${cls}">${ddayLabel(n)}</span>
+      </div>
+      <div class="item-actions">
+        <div class="stepper">
+          <button data-act="dec" aria-label="수량 줄이기" ${it.qty <= 1 ? 'disabled' : ''}>−</button>
+          <span class="qty">${it.qty}<small>개</small></span>
+          <button data-act="inc" aria-label="수량 늘리기">+</button>
+        </div>
+        <button class="btn-done" data-act="done">다 먹었어요</button>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+/* ---------- 식단 탭 ---------- */
+// 재료 별칭 (같은 재료를 다르게 부르는 경우)
+const ALIAS = {
+  '계란': ['계란','달걀','유정란','왕란'],
+  '두부': ['두부'],
+  '순두부': ['순두부'],
+  '만두': ['만두'],
+  '김치': ['김치'],
+  '우유': ['우유'],
+  '김': ['김가루','김'],
+  '치즈': ['치즈'],
+  '닭가슴살': ['닭가슴살'],
+  '다짐육': ['다짐육','소고기','한우'],
+  '토마토': ['토마토'],
+  '요거트': ['요거트','요구르트'],
+};
+function haystack(){ return state.inventory.map(i => i.name.replace(/\s/g,'').toLowerCase()); }
+// 냉장고 품목명이 재료 이름을 포함하면 '보유'로 판단 (긴 이름이 짧은 이름에 끌려가지 않도록 단방향만)
+function hasIngredient(key){
+  const names = haystack();
+  const keys = (ALIAS[key] || [key]).map(k => k.replace(/\s/g,'').toLowerCase());
+  return keys.some(k => names.some(n => n.includes(k)));
+}
+function mealMatch(meal){
+  const have = [], need = [];
+  meal.ing.forEach(g => (hasIngredient(g.key) ? have : need).push(g));
+  return { have, need, ratio: have.length / meal.ing.length };
+}
+
+function renderMeals(){
+  const t = today0();
+  const dow = (t.getDay() + 6) % 7;            // 0 = 월요일
+  const ordered = Array.from({length:7}, (_, i) => {
+    const idx = (dow + i) % 7;
+    return { idx, date: addDays(t, i), meal: MEALS[idx] };
+  });
+
+  // 주간 스트립 (오늘부터 7일)
+  $('#weekStrip').innerHTML = ordered.map((o, i) => `
+    <div class="day-pill ${i===0?'today':''}">
+      <div class="d">${WD[o.date.getDay()]}</div>
+      <div class="n">${o.date.getDate()}</div>
+    </div>`).join('');
+
+  $('#mealList').innerHTML = ordered.map((o, i) => {
+    const m = o.meal, idx = o.idx;
+    const { have, need, ratio } = mealMatch(m);
+    const pct = Math.round(ratio * 100);
+    const open = state.expanded.has(idx);
+    return `<article class="meal ${open?'open':''} ${i===0?'today':''}" data-idx="${idx}">
+      <button class="meal-head" data-act="toggle">
+        <div class="day-badge"><span class="d">${WD[o.date.getDay()]}</span><span class="dt">${shortDate(ymd(o.date))}</span></div>
+        <div class="meal-main">
+          <div class="meal-kids"><span class="menu-emo" aria-hidden="true">${m.emo || '🍽️'}</span><span>${esc(m.kids)}</span></div>
+          <div class="meal-adult"><span class="tag">어른</span>${esc(m.adult)}</div>
+        </div>
+        <div class="meal-side">
+          <span class="match-badge ${pct<60?'low':''}">재료 ${have.length}/${m.ing.length}</span>
+          <span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+      </button>
+      <div class="meal-body">
+        <div class="ing-block">
+          <p class="ing-title">보유 재료 ${have.length} · 추가 필요 ${need.length}</p>
+          <div class="ing-row">
+            ${have.map(g => `<span class="ing have">${esc(g.name)}</span>`).join('')}
+            ${need.map(g => `<span class="ing need">${esc(g.name)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="divider"></div>
+        <p class="ing-title">조리 순서 · 약 ${esc(m.time)}</p>
+        <ol class="steps">${m.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        <div class="meal-tip"><span>💡</span><span>${esc(m.tip)}</span></div>
+        <div class="meal-foot">
+          <button class="btn-soft" data-act="add-need" ${need.length===0?'disabled style="opacity:.5"':''}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            부족한 재료 장보기 담기${need.length?` (${need.length})`:''}
+          </button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+/* ---------- 장보기 탭 ---------- */
+function renderShop(){
+  const items = state.shopping;
+  const pending = items.filter(i => !i.done);
+  const doneCount = items.length - pending.length;
+
+  const row = (it) => `<div class="shop-row ${it.done?'checked':''}" data-id="${it.id}">
+      <button class="check" data-act="toggle" aria-label="체크">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"/></svg>
+      </button>
+      <span class="shop-name">${esc(it.name)}</span>
+      ${it.from ? `<span class="shop-from">${esc(it.from)}</span>` : ''}
+      <button class="shop-del" data-act="del" aria-label="삭제">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>`;
+
+  let html = '';
+  if(items.length){
+    html = `<section class="shop-group">
+      <h3>살 것 <span>${pending.length}개 남음${doneCount?` · 담은 것 ${doneCount}`:''}</span></h3>
+      <div class="shop-card">${items.map(row).join('')}</div>
+    </section>`;
+  }else{
+    html = `<div class="empty"><div class="emo">🛒</div><p>장볼 게 없어요.<br/>위에 입력하거나 <b>식단</b>에서 부족한 재료를 담아보세요.</p></div>`;
+  }
+  $('#shopList').innerHTML = html;
+
+  // 배지 / 이동 바 (체크한 = 담은 것)
+  const badge = $('#shopBadge');
+  if(pending.length){ badge.hidden = false; badge.textContent = pending.length; } else badge.hidden = true;
+  $('#moveLabel').textContent = `선택 ${doneCount}개 냉장고로 옮기기`;
+  $('#shopBar').classList.toggle('show', doneCount > 0 && state.tab === 'shop');
+}
+
+/* ---------- 전체 렌더 ---------- */
+function renderAll(){
+  renderFridge();
+  renderMeals();
+  renderShop();
+  $('#fab').classList.toggle('hide', state.tab !== 'fridge');
+}
+
+/* ---------- 탭 전환 ---------- */
+function switchTab(tab){
+  state.tab = tab;
+  $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $('#screen-fridge').hidden = tab !== 'fridge';
+  $('#screen-meal').hidden = tab !== 'meal';
+  $('#screen-shop').hidden = tab !== 'shop';
+  $('#fab').classList.toggle('hide', tab !== 'fridge');
+  $('#shopBar').classList.toggle('show', tab === 'shop' && state.shopping.some(i => i.done));
+  $$('.screen').forEach(s => { if(!s.hidden){ s.style.animation = 'none'; void s.offsetWidth; s.style.animation = ''; } });
+  window.scrollTo({ top:0, behavior:'instant' });
+}
+$('#nav').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if(b) switchTab(b.dataset.tab);
+});
+
+/* ---------- 냉장고 이벤트 ---------- */
+$('#invList').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const card = btn.closest('.item');
+  const id = card.dataset.id;
+  const item = state.inventory.find(i => i.id === id);
+  if(!item) return;
+  const act = btn.dataset.act;
+
+  if(act === 'inc'){ await StorageAdapter.setQty(id, item.qty + 1); }
+  if(act === 'dec'){ await StorageAdapter.setQty(id, Math.max(1, item.qty - 1)); }
+  if(act === 'done'){
+    card.classList.add('done');
+    card.style.transition = 'opacity .25s ease, transform .25s ease';
+    card.style.transform = 'translateX(12px)';
+    card.style.opacity = '0';
+    setTimeout(async () => {
+      await StorageAdapter.removeItem(id);
+      toast(`<b>${esc(item.name)}</b> 냉장고에서 뺐어요`);
+    }, 220);
+  }
+});
+
+$('#locChips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip[data-loc]');
+  if(!chip) return;
+  state.loc = chip.dataset.loc;
+  state.statFilter = 'all';
+  $$('.stat').forEach(b => b.classList.remove('is-on'));
+  renderFridge();
+});
+
+$('#sortChip').addEventListener('click', () => {
+  state.sort = state.sort === 'expiry' ? 'name' : 'expiry';
+  renderFridge();
+});
+
+$('#searchInput').addEventListener('input', e => {
+  state.query = e.target.value;
+  state.statFilter = 'all';
+  $$('.stat').forEach(b => b.classList.remove('is-on'));
+  $('#searchClear').classList.toggle('show', !!state.query);
+  renderFridge();
+});
+$('#searchClear').addEventListener('click', () => {
+  state.query = '';
+  $('#searchInput').value = '';
+  $('#searchClear').classList.remove('show');
+  renderFridge();
+});
+
+$$('.stat').forEach(btn => btn.addEventListener('click', () => {
+  const jump = btn.dataset.jump;
+  state.statFilter = jump;
+  state.loc = '전체';
+  state.query = '';
+  $('#searchInput').value = '';
+  $('#searchClear').classList.remove('show');
+  renderFridge();
+  $$('.stat').forEach(b => b.classList.toggle('is-on', b === btn && jump !== 'all'));
+  switchTab('fridge');
+}));
+
+/* ---------- 식단 이벤트 ---------- */
+$('#mealList').addEventListener('click', async e => {
+  const host = e.target.closest('.meal');
+  if(!host) return;
+  const idx = Number(host.dataset.idx);
+  const actEl = e.target.closest('[data-act]');
+  if(!actEl) return;
+  const act = actEl.dataset.act;
+
+  if(act === 'toggle'){
+    if(state.expanded.has(idx)) state.expanded.delete(idx); else state.expanded.add(idx);
+    renderMeals();
+  }
+  if(act === 'add-need'){
+    const { need } = mealMatch(MEALS[idx]);
+    if(!need.length) return;
+    const norm = (s) => s.replace(/\s/g,'').replace(/[0-9]+.*$/,'').toLowerCase();
+    const existing = new Set(state.shopping.map(s => norm(s.name)));
+    const added = [];
+    need.forEach(g => {
+      const k = norm(g.name);
+      if(existing.has(k)) return;
+      existing.add(k);
+      state.shopping.push({ id: uid(), name: g.name, from: `${MEALS[idx].day}요일 식단`, done:false, addedAt: new Date().toISOString() });
+      added.push(g.name);
+    });
+    if(added.length){
+      await StorageAdapter.saveShopping(state.shopping);
+      const badge = $('#shopBadge');
+      toast(`장보기에 <b>${added.length}개</b> 담았어요`);
+    }else{
+      toast('이미 장보기에 다 담겨 있어요');
+    }
+  }
+});
+
+/* ---------- 장보기 이벤트 ---------- */
+$('#shopList').addEventListener('click', async e => {
+  const rowEl = e.target.closest('.shop-row');
+  if(!rowEl) return;
+  const id = rowEl.dataset.id;
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if(!act) return;
+
+  if(act === 'toggle'){
+    const it = state.shopping.find(s => s.id === id);
+    if(!it) return;
+    it.done = !it.done;
+    await StorageAdapter.saveShopping(state.shopping);
+    renderShop();
+  }
+  if(act === 'del'){
+    state.shopping = state.shopping.filter(s => s.id !== id);
+    await StorageAdapter.saveShopping(state.shopping);
+    renderShop();
+  }
+});
+
+$('#shopInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); addShopItem(); }
+});
+$('#shopAddBtn').addEventListener('click', addShopItem);
+async function addShopItem(){
+  const el = $('#shopInput');
+  const v = el.value.trim();
+  if(!v){ el.focus(); return; }
+  state.shopping.push({ id: uid(), name: v, from: '직접 추가', done:false, addedAt: new Date().toISOString() });
+  el.value = '';
+  await StorageAdapter.saveShopping(state.shopping);
+  toast(`<b>${esc(v)}</b> 장보기에 담았어요`);
+}
+
+/* ---------- 시트 공통 ---------- */
+function openSheet(id){
+  $$('.sheet').forEach(s => s.classList.remove('show'));
+  $(id).classList.add('show');
+  $('#scrim').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheets(){
+  $$('.sheet').forEach(s => { s.classList.remove('show'); s.setAttribute('aria-hidden','true'); });
+  $('#scrim').classList.remove('show');
+  document.body.style.overflow = '';
+}
+$('#scrim').addEventListener('click', closeSheets);
+$$('[data-close]').forEach(b => b.addEventListener('click', closeSheets));
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeSheets(); });
+
+/* ---------- 추가 시트 ---------- */
+$('#fab').addEventListener('click', () => {
+  $('#addSheetTitle').textContent = '품목 추가';
+  $('#fName').value = '';
+  $('#fAmount').value = '';
+  $('#fQty').value = '1';
+  $('#fLoc').value = '냉장';
+  $('#fExp').value = ymd(addDays(today0(), 7));
+  openSheet('#addSheet');
+  setTimeout(() => $('#fName').focus(), 260);
+});
+
+$('#addForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#fName').value.trim();
+  const amount = $('#fAmount').value.trim();
+  const qty = Math.max(1, Number($('#fQty').value) || 1);
+  const location = $('#fLoc').value;
+  const expiresAt = $('#fExp').value;
+  if(!name || !expiresAt) return;
+  state.inventory.push({ id: uid(), name, amount, qty, location, expiresAt, addedAt: new Date().toISOString() });
+  await StorageAdapter.saveInventory(state.inventory);
+  closeSheets();
+  toast(`<b>${esc(name)}</b> 냉장고에 넣었어요`);
+  switchTab('fridge');
+  state.loc = '전체'; state.sort = 'expiry'; state.statFilter = 'all';
+  renderAll();
+});
+
+/* ---------- 장보기 → 냉장고 ---------- */
+function guessLocation(name){
+  if(/만두|아이스|냉동|닭가슴살|삼겹살|소고기|불고기|다짐육/.test(name)) return '냉동';
+  if(/양파|상추|무|당근|양배추|감자|마늘|김가루|라면|즉석밥|간장|소금|기름|양념|쌀/.test(name)) return '실온';
+  return '냉장';
+}
+function defaultShelfDays(name){
+  if(/상추|양상추|시금치|깻잎|채소/.test(name)) return 5;
+  if(/두부|우유|생크림|요거트/.test(name)) return 7;
+  if(/고기|삼겹살|닭|소고기|다짐육/.test(name)) return 30;
+  if(/양파|무|당근|감자/.test(name)) return 14;
+  if(/간장|양념|소금|김가루|즉석밥/.test(name)) return 120;
+  return 7;
+}
+$('#moveBtn').addEventListener('click', () => {
+  const items = state.shopping.filter(i => i.done);
+  if(!items.length) return;
+  state.pendingMove = items.map(it => ({
+    id: it.id,
+    name: it.name,
+    location: guessLocation(it.name),
+    expiresAt: ymd(addDays(today0(), defaultShelfDays(it.name)))
+  }));
+  $('#moveList').innerHTML = state.pendingMove.map((m, i) => `<div class="move-row" data-i="${i}">
+    <div class="top"><span class="nm">${esc(m.name)}</span>
+      <div class="ctrls">
+        <select data-f="location">
+          ${['냉장','냉동','실온'].map(l => `<option ${l===m.location?'selected':''}>${l}</option>`).join('')}
+        </select>
+        <input type="date" data-f="expiresAt" value="${m.expiresAt}" />
+      </div>
+    </div>
+  </div>`).join('');
+  openSheet('#moveSheet');
+});
+$('#moveList').addEventListener('change', e => {
+  const f = e.target.dataset.f; if(!f) return;
+  const row = e.target.closest('.move-row');
+  const i = Number(row.dataset.i);
+  state.pendingMove[i][f] = e.target.value;
+});
+$('#moveConfirm').addEventListener('click', async () => {
+  const moved = state.pendingMove.slice();
+  if(!moved.length){ closeSheets(); return; }
+  const nextInventory = state.inventory.slice();
+  moved.forEach(m => {
+    nextInventory.push({
+      id: uid(), name: m.name, amount: '', qty: 1, location: m.location,
+      expiresAt: m.expiresAt, addedAt: new Date().toISOString()
+    });
+  });
+  const ids = new Set(moved.map(m => m.id));
+  const nextShopping = state.shopping.filter(s => !ids.has(s.id));
+  state.pendingMove = [];
+  await StorageAdapter.saveAll(nextInventory, nextShopping);
+  closeSheets();
+  toast(`<b>${moved.length}개</b> 냉장고로 옮겼어요`);
+  renderAll();
+});
+
+/* ---------- 시작 ---------- */
+boot();
+
+window.addEventListener('scroll', () => {
+  document.querySelector('.app-header').classList.toggle('scrolled', window.scrollY > 4);
+}, { passive: true });
+
+// 30초마다 "동기화" 표기 갱신 + 날짜 넘어가면 D-day 재계산
+setInterval(async () => {
+  const s = await StorageAdapter.load();
+  setSyncText(s.updatedAt);
+  renderFridge();
+}, 30000);
+</script>
+</body>
+</html>
