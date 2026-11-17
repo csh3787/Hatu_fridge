@@ -85,7 +85,45 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   s = await StorageAdapter.load();
   ok(s.shopping.find(x => x.id === 'sh1').done === true, '체크한 sh1 유지', s.shopping.find(x => x.id === 'sh1'));
 
-  console.log('[6] 오프라인/404 에서도 기존 동작 그대로');
+  console.log('[6] 원격에서 빠진 항목은 냉장고에서도 빠짐 (방금 손댄 항목은 유지)');
+  setRemote({
+    updatedAt: T(-30 * 1000),
+    inventory: [{ id: 'inv7', name: '사과', qty: 1, location: '냉장', expiresAt: '2026-11-28' }],
+    meals: [],
+    shopping: [{ id: 'sh1', name: '계란', from: '삐클이', done: false }]
+  });
+  await StorageAdapter.syncFromRemote();
+  s = await StorageAdapter.load();
+  ok(ids(s.inventory).includes('inv7'), '원격 항목 inv7 추가', ids(s.inventory));
+
+  await StorageAdapter.setQty('inv7', 4);            // 세화가 방금 직접 고침
+  setRemote({
+    updatedAt: T(-10 * 1000),
+    inventory: [{ id: 'inv8', name: '두부', qty: 1, location: '냉장', expiresAt: '2026-11-20' }],
+    meals: [],
+    shopping: [{ id: 'sh9', name: '우유', from: '삐클이', done: false }]
+  });
+  await StorageAdapter.syncFromRemote();
+  s = await StorageAdapter.load();
+  ok(ids(s.inventory).includes('inv7'), '방금 고친 inv7 은 남김', ids(s.inventory));
+  ok(ids(s.inventory).includes('inv8'), '새 원격 항목 inv8 추가', ids(s.inventory));
+  ok(ids(s.inventory).includes('inv1') && ids(s.inventory).includes('loc1'), '로컬/inv1 유지', ids(s.inventory));
+  ok(ids(s.shopping).includes('sh9'), '장보기 sh9 추가', ids(s.shopping));
+
+  setRemote({
+    updatedAt: T(0),
+    inventory: [],
+    meals: [],
+    shopping: []
+  });
+  await StorageAdapter.syncFromRemote();
+  s = await StorageAdapter.load();
+  ok(!ids(s.inventory).includes('inv8'), '원격에서 빠진 inv8 제거', ids(s.inventory));
+  ok(!ids(s.shopping).includes('sh9'), '원격에서 빠진 sh9 제거', ids(s.shopping));
+  ok(ids(s.inventory).includes('loc1'), '로컬 전용 loc1 은 그대로', ids(s.inventory));
+  ok(ids(s.inventory).includes('inv7'), '직접 고친 inv7 은 그대로', ids(s.inventory));
+
+  console.log('[7] 오프라인/404 에서도 기존 동작 그대로');
   const before = JSON.parse(JSON.stringify(await StorageAdapter.load()));
   setFetchMode('throw');
   await StorageAdapter.syncFromRemote();
@@ -97,19 +135,19 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   ok(after.inventory.length === before.inventory.length, '404(HTML 응답)에도 그대로');
   setFetchMode('ok');
 
-  console.log('[7] 깨진 원격 데이터(updatedAt 없음)는 무시');
+  console.log('[8] 깨진 원격 데이터(updatedAt 없음)는 무시');
   const keep = JSON.parse(JSON.stringify(await StorageAdapter.load()));
   setRemote({ inventory: [{ id: 'ghost', name: '유령' }] });
   await StorageAdapter.syncFromRemote();
   s = await StorageAdapter.load();
   ok(!ids(s.inventory).includes('ghost') && s.inventory.length === keep.inventory.length, 'updatedAt 없는 원격 무시');
 
-  console.log('[8] normalizeMeals: 빈/깨진 식단 안전 처리');
+  console.log('[9] normalizeMeals: 빈/깨진 식단 안전 처리');
   ok(normalizeMeals(undefined).length === 0, 'undefined → []');
   ok(normalizeMeals([{ kids: '밥' }]).length === 0, '재료 없는 식단 제외');
   ok(normalizeMeals([{ kids: '밥', ing: [{ name: '쌀' }] }])[0].ing[0].key === '쌀', 'key 없으면 name 사용');
 
-  console.log('[9] 로컬 수정보다 더 새로운 원격 값은 원격이 이김');
+  console.log('[10] 로컬 수정보다 더 새로운 원격 값은 원격이 이김');
   setRemote({
     updatedAt: T(+10 * MIN),
     inventory: [{ id: 'inv1', name: '서울우유', amount: '900ml', qty: 3, location: '냉장', expiresAt: '2026-11-26' }],

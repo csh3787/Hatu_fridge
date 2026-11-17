@@ -815,6 +815,7 @@ const StorageAdapter = (() => {
       inventory: seedInventory(), shopping: seedShopping(), meals: [],
       updatedAt: nowIso(), lastSyncedAt: null,
       deletedIds: { inventory: [], shopping: [] },
+      remoteSeen: { inventory: {}, shopping: {} },
       touched: {}
     };
   }
@@ -827,6 +828,9 @@ const StorageAdapter = (() => {
     if(!s.deletedIds || typeof s.deletedIds !== 'object') s.deletedIds = {};
     if(!Array.isArray(s.deletedIds.inventory)) s.deletedIds.inventory = [];
     if(!Array.isArray(s.deletedIds.shopping)) s.deletedIds.shopping = [];
+    if(!s.remoteSeen || typeof s.remoteSeen !== 'object') s.remoteSeen = {};
+    if(!s.remoteSeen.inventory || typeof s.remoteSeen.inventory !== 'object') s.remoteSeen.inventory = {};
+    if(!s.remoteSeen.shopping || typeof s.remoteSeen.shopping !== 'object') s.remoteSeen.shopping = {};
     if(!s.touched || typeof s.touched !== 'object') s.touched = {};
     return s;
   }
@@ -890,9 +894,11 @@ const StorageAdapter = (() => {
 
   /**
    * 원격 JSON 을 로컬에 합칩니다. (원격이 더 최신일 때만)
-   * - 같은 id: 세화가 마지막 동기화 이후 직접 고친 항목은 그대로 두고, 아니면 원격 값으로 갱신
+   * - 같은 id: 세화가 원격 스냅샷 이후 직접 고친 항목은 그대로 두고, 아니면 원격 값으로 갱신
    * - 원격에만 있는 id: 새로 추가
-   * - 로컬에만 있는 id: 세화가 직접 넣은 항목이므로 유지
+   * - 원격이 보낸 적 있는 id 가 이번 원격에서 빠짐: 냉장고에서 빠진 것이므로 지움
+   *   (세화가 방금 직접 고친 항목은 남김)
+   * - 원격에 없던 로컬 id: 세화가 직접 넣은 항목이므로 유지
    * - 세화가 지운 id(deletedIds): 원격에 다시 나타나도 되살리지 않음
    */
   function mergeRemote(remote){
@@ -906,29 +912,55 @@ const StorageAdapter = (() => {
     // 사용자의 로컬 수정이 원격 스냅샷보다 나중이면 그 항목은 그대로 둡니다.
     const deletedInv = new Set(s.deletedIds.inventory);
     const deletedShop = new Set(s.deletedIds.shopping);
+    const seenInv = s.remoteSeen.inventory;
+    const seenShop = s.remoteSeen.shopping;
 
     // 재고
     const inv = new Map(s.inventory.map(it => [it.id, it]));
-    (Array.isArray(remote.inventory) ? remote.inventory : []).forEach(r => {
+    const incomingInv = Array.isArray(remote.inventory) ? remote.inventory : null;
+    const incomingInvIds = new Set();
+    (incomingInv || []).forEach(r => {
       if(!r || !r.name) return;
       const id = remoteId(r, 'ri');
+      incomingInvIds.add(id);
       if(deletedInv.has(id)) return;
       const local = inv.get(id);
       if(local && (s.touched[id] || 0) > seenAt) return;   // 직접 고친 항목은 유지
       inv.set(id, normInv(r, id));
     });
+    if(incomingInv){   // 원격이 보낸 적 있는 항목이 이번엔 빠졌다면 냉장고에서 빠진 것
+      Object.keys(seenInv).forEach(id => {
+        if(incomingInvIds.has(id)) return;
+        if((s.touched[id] || 0) > seenAt) return;          // 방금 손댄 항목은 남김
+        inv.delete(id);
+      });
+      s.remoteSeen.inventory = {};
+      incomingInvIds.forEach(id => { s.remoteSeen.inventory[id] = true; });
+    }
     s.inventory = Array.from(inv.values());
 
     // 장보기
     const shop = new Map(s.shopping.map(it => [it.id, it]));
-    (Array.isArray(remote.shopping) ? remote.shopping : []).forEach(r => {
+    const incomingShop = Array.isArray(remote.shopping) ? remote.shopping : null;
+    const incomingShopIds = new Set();
+    (incomingShop || []).forEach(r => {
       if(!r || !r.name) return;
       const id = remoteId(r, 'rs');
+      incomingShopIds.add(id);
       if(deletedShop.has(id)) return;
       const local = shop.get(id);
       if(local && (s.touched[id] || 0) > seenAt) return;
       shop.set(id, normShop(r, id));
     });
+    if(incomingShop){
+      Object.keys(seenShop).forEach(id => {
+        if(incomingShopIds.has(id)) return;
+        if((s.touched[id] || 0) > seenAt) return;
+        shop.delete(id);
+      });
+      s.remoteSeen.shopping = {};
+      incomingShopIds.forEach(id => { s.remoteSeen.shopping[id] = true; });
+    }
     s.shopping = Array.from(shop.values());
 
     // 식단 (원격이 보내준 경우 그대로 사용)

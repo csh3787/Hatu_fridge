@@ -122,6 +122,19 @@ def main():
         print(__doc__)
         return 2
     payload = json.load(open(args[0], encoding='utf-8'))
+
+    # 페이로드에서 빠진 섹션은 기존 파일 내용을 그대로 유지합니다(실수로 지우는 일 방지).
+    current = {}
+    if os.path.exists(DATA):
+        try:
+            current = json.load(open(DATA, encoding='utf-8'))
+        except Exception:
+            current = {}
+    for key in ('inventory', 'shopping', 'meals'):
+        if key not in payload:
+            payload[key] = current.get(key, [])
+            print(f'  · {key}: 페이로드에 없어 기존 데이터 {len(payload[key])}개 유지')
+
     data, errors = normalize(payload)
     if errors:
         print('검증 실패:')
