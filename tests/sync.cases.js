@@ -5,10 +5,12 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   // 원격 파일 시각은 '지금'을 기준으로 만듭니다 (실제 삐클이 업로드 시각과 같은 성격).
   const T = ms => new Date(Date.now() + ms).toISOString();
   const MIN = 60000;
+  const R1 = T(-30 * MIN), R2 = T(-20 * MIN), R3 = T(-10 * MIN), R4 = T(-2 * MIN);
+  const R5 = T(-30 * 1000), R6 = T(-10 * 1000), R7 = T(0), R8 = T(+10 * MIN);
 
   console.log('[1] 첫 실행: 원격 데이터를 로컬로 가져오기');
   setRemote({
-    updatedAt: T(-30 * MIN),
+    updatedAt: R1,
     inventory: [
       { id: 'inv1', name: '서울우유', amount: '900ml', qty: 2, location: '냉장', expiresAt: '2026-11-24' },
       { name: '대파', qty: 1, location: '냉장', expiresAt: '2026-11-25' }
@@ -21,7 +23,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   ok(s.inventory.find(x => x.id === 'inv1').qty === 2, '원격 수량 유지');
   ok(s.shopping.length === 1 && s.shopping[0].id === 'sh1', '장보기 반영');
   ok(s.meals.length === 1, '식단 반영');
-  ok(s.lastSyncedAt === T(-30 * MIN), 'lastSyncedAt 기록', s.lastSyncedAt);
+  ok(s.lastSyncedAt === R1, 'lastSyncedAt 기록', s.lastSyncedAt);
   const noId = s.inventory.find(x => !x.id.startsWith('inv'));
   ok(!!noId && /^ri/.test(noId.id), 'id 없는 항목에 고정 id 부여', noId && noId.id);
   const noIdKey = noId.id;
@@ -39,7 +41,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
     { id: 'loc1', name: '집에서 추가한 두부', amount: '', qty: 1, location: '냉장', expiresAt: '2026-11-20', addedAt: new Date().toISOString() }
   ]));
   setRemote({
-    updatedAt: T(-20 * MIN),
+    updatedAt: R2,
     inventory: [
       { id: 'inv1', name: '서울우유', amount: '900ml', qty: 1, location: '냉장', expiresAt: '2026-11-24' },
       { id: 'inv2', name: '애호박', qty: 2, location: '냉장', expiresAt: '2026-11-22' }
@@ -58,7 +60,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   console.log('[4] 사용자가 지운 항목은 원격에 다시 나타나도 되살아나지 않음');
   await StorageAdapter.removeItem('inv2');
   setRemote({
-    updatedAt: T(-10 * MIN),
+    updatedAt: R3,
     inventory: [
       { id: 'inv1', name: '서울우유', amount: '900ml', qty: 1, location: '냉장', expiresAt: '2026-11-24' },
       { id: 'inv2', name: '애호박', qty: 2, location: '냉장', expiresAt: '2026-11-22' }
@@ -71,12 +73,12 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   ok(!ids(s.inventory).includes('inv2'), '지운 inv2 부활 없음', ids(s.inventory));
   ok(ids(s.inventory).includes('loc1'), 'loc1 그대로');
   ok(s.deletedIds.inventory.includes('inv2'), '삭제 기록 유지', s.deletedIds.inventory);
-  ok(s.lastSyncedAt === T(-10 * MIN), 'lastSyncedAt 갱신', s.lastSyncedAt);
+  ok(s.lastSyncedAt === R3, 'lastSyncedAt 갱신', s.lastSyncedAt);
 
   console.log('[5] 장보기 체크 상태는 원격 재동기화에도 유지');
   await StorageAdapter.saveShopping(s.shopping.map(x => x.id === 'sh1' ? Object.assign({}, x, { done: true }) : x));
   setRemote({
-    updatedAt: T(-2 * MIN),
+    updatedAt: R4,
     inventory: [],
     meals: [],
     shopping: [{ id: 'sh1', name: '계란', from: '삐클이', done: false }]
@@ -87,7 +89,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
 
   console.log('[6] 원격에서 빠진 항목은 냉장고에서도 빠짐 (방금 손댄 항목은 유지)');
   setRemote({
-    updatedAt: T(-30 * 1000),
+    updatedAt: R5,
     inventory: [{ id: 'inv7', name: '사과', qty: 1, location: '냉장', expiresAt: '2026-11-28' }],
     meals: [],
     shopping: [{ id: 'sh1', name: '계란', from: '삐클이', done: false }]
@@ -98,7 +100,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
 
   await StorageAdapter.setQty('inv7', 4);            // 세화가 방금 직접 고침
   setRemote({
-    updatedAt: T(-10 * 1000),
+    updatedAt: R6,
     inventory: [{ id: 'inv8', name: '두부', qty: 1, location: '냉장', expiresAt: '2026-11-20' }],
     meals: [],
     shopping: [{ id: 'sh9', name: '우유', from: '삐클이', done: false }]
@@ -111,7 +113,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
   ok(ids(s.shopping).includes('sh9'), '장보기 sh9 추가', ids(s.shopping));
 
   setRemote({
-    updatedAt: T(0),
+    updatedAt: R7,
     inventory: [],
     meals: [],
     shopping: []
@@ -149,7 +151,7 @@ module.exports = async function runCases(StorageAdapter, normalizeMeals, ok, set
 
   console.log('[10] 로컬 수정보다 더 새로운 원격 값은 원격이 이김');
   setRemote({
-    updatedAt: T(+10 * MIN),
+    updatedAt: R8,
     inventory: [{ id: 'inv1', name: '서울우유', amount: '900ml', qty: 3, location: '냉장', expiresAt: '2026-11-26' }],
     meals: [],
     shopping: []
