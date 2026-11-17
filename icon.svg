@@ -1,7 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="하투 냉장고">
-  <rect width="180" height="180" rx="40" fill="#111111"/>
-  <rect x="48" y="73.25" width="84" height="7.5" fill="#FFFFFF"/>
-  <rect x="51.75" y="30.75" width="76.5" height="118.5" rx="13.25" fill="none" stroke="#FFFFFF" stroke-width="7.5"/>
-  <rect x="86.25" y="47" width="7.5" height="13" rx="3.75" fill="#FFFFFF"/>
-  <rect x="86.25" y="103" width="7.5" height="20" rx="3.75" fill="#FFFFFF"/>
+  <rect width="180" height="180" fill="#EE8A74"/>
+  <!-- 냉장고 몸체 (상단 2도어 + 하단 1서랍) -->
+  <rect x="52.1" y="33" width="75.7" height="112.3" rx="5.7" fill="#FFFFFF"/>
+  <!-- 도어 세로 분할선 -->
+  <rect x="89.3" y="33" width="1.3" height="84.2" fill="#EE8A74"/>
+  <!-- 서랍 가로 분할선 -->
+  <rect x="52.1" y="116.2" width="75.7" height="1.3" fill="#EE8A74"/>
+  <!-- 도어 손잡이 -->
+  <rect x="81.7" y="60" width="2.7" height="25.6" rx="1.35" fill="#F2B5A6"/>
+  <rect x="95.3" y="60" width="2.7" height="25.6" rx="1.35" fill="#F2B5A6"/>
+  <!-- 서랍 손잡이 -->
+  <rect x="84.4" y="124.6" width="12" height="2.6" rx="1.3" fill="#F2B5A6"/>
 </svg>
