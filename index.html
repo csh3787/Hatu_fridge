@@ -1023,6 +1023,8 @@ const StorageAdapter = (() => {
       try{ await syncRemote(); }catch(e){ /* 오프라인 등 — 로컬만 사용 */ }
       return read();
     },
+    /** 원격 확인 없이 저장된 로컬 데이터만 즉시 (첫 화면을 바로 그릴 때) */
+    loadLocal(){ return read(); },
     async saveInventory(list){
       const s = read();
       trackDiff(s, s.inventory, s.shopping, list, s.shopping);
@@ -1159,8 +1161,8 @@ function applyState(s){
 }
 
 async function boot(){
-  const s = await StorageAdapter.load();
-  applyState(s);
+  // 1) 저장된 로컬 데이터로 즉시 첫 화면을 그리고,
+  applyState(StorageAdapter.loadLocal());
   renderAll();
   StorageAdapter.subscribe(async (reason) => {
     const t = await StorageAdapter.load();
@@ -1173,6 +1175,8 @@ async function boot(){
     if(document.visibilityState === 'visible') StorageAdapter.syncFromRemote();
   });
   window.addEventListener('focus', () => StorageAdapter.syncFromRemote());
+  // 2) 원격 확인은 뒤에서 — 새 내용이 있으면 구독자가 화면을 다시 그립니다.
+  StorageAdapter.load();
 }
 function setSyncText(iso){
   const el = $('#syncText');
